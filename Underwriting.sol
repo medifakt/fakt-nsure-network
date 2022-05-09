@@ -1211,11 +1211,11 @@ contract ReentrancyGuard {
     }
 }
 
-// File: contracts/interfaces/INsure.sol
+// File: contracts/interfaces/IFakt.sol
 
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
-interface INsure {
+interface IFakt {
 
     function burn(uint256 amount)  external ;
     function transfer(address recipient, uint256 amount) external returns (bool);
@@ -1227,7 +1227,7 @@ interface INsure {
 // File: contracts/Underwriting.sol
 
 /**
- * @dev     a contract for locking Nsure Token to be an underwriter.
+ * @dev     a contract for locking Fakt Token to be an underwriter.
  *   
  * @notice  the underwriter program would be calculated and recorded by central ways
             which is too complicated for contracts(gas used etc.)
@@ -1273,7 +1273,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
     DivCurrency[] public divCurrencies;
     
 
-    INsure public Nsure;
+    IFakt public Fakt;
     uint256 private _totalSupply;
     uint256 public claimDuration = 30 minutes;
 
@@ -1298,8 +1298,8 @@ contract Underwriting is Ownable, ReentrancyGuard{
     /// @notice The EIP-712 typehash for the permit struct used by the contract
     bytes32 public constant WITHDRAW_TYPEHASH = keccak256("Withdraw(address account,uint256 amount,uint256 nonce,uint256 deadline)");
 
-    constructor(address _signer, address _nsure)public {
-        Nsure = INsure(_nsure);
+    constructor(address _signer, address _fakt)public {
+        Fakt = IFakt(_fakt);
         signer = _signer;
     }
 
@@ -1355,8 +1355,8 @@ contract Underwriting is Ownable, ReentrancyGuard{
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
 
-        // Nsure.transferFrom(msg.sender, address(this), amount);
-        Nsure.transferFrom(msg.sender,address(this),amount);
+        // Fakt.transferFrom(msg.sender, address(this), amount);
+        Fakt.transferFrom(msg.sender,address(this),amount);
         emit Deposit(msg.sender, amount);
     }
 
@@ -1378,7 +1378,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
         require(block.timestamp <= deadline, "signature expired");
 
         _balances[msg.sender] = _balances[msg.sender].sub(_amount);
-        Nsure.transfer(msg.sender,_amount);
+        Fakt.transfer(msg.sender,_amount);
         emit Withdraw(msg.sender,_amount,nonces[msg.sender]-1);
     }
 
@@ -1392,7 +1392,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
             require(_balances[_burnUsers[i]] >= _amounts[i], "insufficient");
 
             _balances[_burnUsers[i]] = _balances[_burnUsers[i]].sub(_amounts[i]);
-            Nsure.burn(_amounts[i]);
+            Fakt.burn(_amounts[i]);
 
             emit Burn(_burnUsers[i],_amounts[i],_product);
         }

@@ -1027,11 +1027,11 @@ library SafeERC20 {
     }
 }
 
-// File: contracts/interfaces/INsure.sol
+// File: contracts/interfaces/IFakt.sol
 
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
-interface INsure {
+interface IFakt {
 
     function burn(uint256 amount)  external ;
     function transfer(address recipient, uint256 amount) external returns (bool);
@@ -1085,12 +1085,12 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         IERC20 lpToken;             // Address of token contract.
         uint256 allocPoint;
         uint256 lastRewardBlock;
-        uint256 accNsurePerShare;
+        uint256 accFaktPerShare;
         uint256 pending;
     }
  
-    INsure public nsure;
-    uint256 public nsurePerBlock    = 18 * 1e17;
+    IFakt public fakt;
+    uint256 public faktPerBlock    = 18 * 1e17;
 
     uint256 public pendingDuration  = 14 days;
 
@@ -1135,8 +1135,8 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
 
 
-    constructor(address _signer, address _nsure, uint256 _startBlock) public {
-        nsure       = INsure(_nsure);
+    constructor(address _signer, address _fakt, uint256 _startBlock) public {
+        fakt       = IFakt(_fakt);
         startBlock  = _startBlock;
         userCapacityMax[0] = 10000e18;
         signer = _signer;
@@ -1177,7 +1177,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
    
    
     function updateBlockReward(uint256 _newReward) external onlyOwner {
-        nsurePerBlock   = _newReward;
+        faktPerBlock   = _newReward;
         emit UpdateBlockReward(_newReward);
     }
 
@@ -1209,7 +1209,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accNsurePerShare: 0,
+            accFaktPerShare: 0,
             pending: 0
         }));
 
@@ -1232,19 +1232,19 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         return _to.sub(_from);
     }
 
-    function pendingNsure(uint256 _pid, address _user) external view returns (uint256) {
+    function pendingFakt(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
 
-        uint256 accNsurePerShare = pool.accNsurePerShare;
+        uint256 accFaktPerShare = pool.accFaktPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accNsurePerShare = accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
+            uint256 faktReward = multiplier.mul(faktPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+            accFaktPerShare = accFaktPerShare.add(faktReward.mul(1e12).div(lpSupply));
         }
 
-        return user.amount.mul(accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accFaktPerShare).div(1e12).sub(user.rewardDebt);
     }
 
 //
@@ -1268,11 +1268,11 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         }
 
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 nsureReward = multiplier.mul(nsurePerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        uint256 faktReward = multiplier.mul(faktPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
 
-        bool mintRet = nsure.mint(address(this), nsureReward);
+        bool mintRet = fakt.mint(address(this), faktReward);
         if(mintRet) {
-            pool.accNsurePerShare = pool.accNsurePerShare.add(nsureReward.mul(1e12).div(lpSupply));
+            pool.accFaktPerShare = pool.accFaktPerShare.add(faktReward.mul(1e12).div(lpSupply));
             pool.lastRewardBlock = block.number;
         }
     }
@@ -1290,15 +1290,15 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
       
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
 
-        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
         
         user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accFaktPerShare).div(1e12);
         
         pool.amount = pool.amount.add(_amount);
 
         if(pending > 0){
-            safeNsureTransfer(msg.sender,pending);
+            safeFaktTransfer(msg.sender,pending);
         }
 
         emit Deposit(msg.sender, _pid, _amount);
@@ -1355,17 +1355,17 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(user.amount >= _amount, "unstake: insufficient assets");
 
         updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
        
         user.amount     = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accFaktPerShare).div(1e12);
 
         user.pendingAt  = block.timestamp;
         user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
 
         pool.pending = pool.pending.add(_amount);
 
-        safeNsureTransfer(msg.sender, pending);
+        safeFaktTransfer(msg.sender, pending);
 
         emit Unstake(msg.sender,_pid,_amount,nonces[msg.sender]-1);
     }
@@ -1423,15 +1423,15 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
       
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
 
-        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
         
         user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accFaktPerShare).div(1e12);
         
         pool.amount = pool.amount.add(_amount);
 
         if(pending > 0){
-            safeNsureTransfer(msg.sender,pending);
+            safeFaktTransfer(msg.sender,pending);
         }
 
         emit DepositSign(msg.sender, _pid, _amount,nonces[msg.sender] - 1);
@@ -1479,10 +1479,10 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
         updatePool(_pid);
 
-        uint256 pending = user.amount.mul(pool.accNsurePerShare).div(1e12).sub(user.rewardDebt);
-        safeNsureTransfer(msg.sender, pending);
+        uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
+        safeFaktTransfer(msg.sender, pending);
 
-        user.rewardDebt = user.amount.mul(pool.accNsurePerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accFaktPerShare).div(1e12);
 
         emit Claim(msg.sender, _pid, pending);
     }
@@ -1500,15 +1500,15 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
     //     user.rewardDebt = 0;
     // }
 
-    function safeNsureTransfer(address _to, uint256 _amount) internal {
+    function safeFaktTransfer(address _to, uint256 _amount) internal {
         require(_to != address(0),"_to is zero");
-        uint256 nsureBal = nsure.balanceOf(address(this));
-        if (_amount > nsureBal) {
-            // nsure.transfer(_to, nsureBal);
-            nsure.transfer(_to,nsureBal);
+        uint256 faktBal = fakt.balanceOf(address(this));
+        if (_amount > faktBal) {
+            // fakt.transfer(_to, faktBal);
+            fakt.transfer(_to,faktBal);
         } else {
-            // nsure.transfer(_to, _amount);
-            nsure.transfer(_to,_amount);
+            // fakt.transfer(_to, _amount);
+            fakt.transfer(_to,_amount);
         }
     }
     
