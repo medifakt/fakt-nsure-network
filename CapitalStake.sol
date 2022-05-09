@@ -1247,7 +1247,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         return user.amount.mul(accNsurePerShare).div(1e12).sub(user.rewardDebt);
     }
 
-
+//
     function massUpdatePools() public {
         uint256 length = poolInfo.length;
         for (uint256 pid = 0; pid < length; ++pid) {
