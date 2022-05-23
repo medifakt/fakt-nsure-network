@@ -1,27 +1,6 @@
-
-
-pragma solidity ^0.6.0;
-
-/*
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they should not be accessed in such a direct
- * manner, since when dealing with GSN meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-abstract contract Context {
-    function _msgSender() internal view virtual returns (address payable) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view virtual returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
-}
+/**
+ *Submitted for verification at Etherscan.io on 2021-03-30
+*/
 
 // File: @openzeppelin/contracts/token/ERC20/IERC20.sol
 
@@ -227,6 +206,7 @@ library SafeMath {
         require(b > 0, errorMessage);
         uint256 c = a / b;
         // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
         return c;
     }
 
@@ -405,6 +385,33 @@ library Address {
                 revert(errorMessage);
             }
         }
+    }
+}
+
+// File: @openzeppelin/contracts/GSN/Context.sol
+
+
+
+pragma solidity ^0.6.0;
+
+/*
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with GSN meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes memory) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        return msg.data;
     }
 }
 
@@ -717,6 +724,77 @@ contract ERC20 is Context, IERC20 {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }
 
+// File: @openzeppelin/contracts/access/Ownable.sol
+
+
+
+pragma solidity ^0.6.0;
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * By default, the owner account will be the one that deploys the contract. This
+ * can later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
+ 
+contract Ownable is Context {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    constructor () internal {
+        address msgSender = _msgSender();
+        _owner = msgSender;
+        emit OwnershipTransferred(address(0), msgSender);
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(_owner == _msgSender(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
 // File: @openzeppelin/contracts/token/ERC20/SafeERC20.sol
 
 
@@ -794,95 +872,283 @@ library SafeERC20 {
     }
 }
 
-// File: @openzeppelin/contracts/utils/Pausable.sol
+// File: @openzeppelin/contracts/utils/EnumerableSet.sol
 
 
 
 pragma solidity ^0.6.0;
 
+/**
+ * @dev Library for managing
+ * https://en.wikipedia.org/wiki/Set_(abstract_data_type)[sets] of primitive
+ * types.
+ *
+ * Sets have the following properties:
+ *
+ * - Elements are added, removed, and checked for existence in constant time
+ * (O(1)).
+ * - Elements are enumerated in O(n). No guarantees are made on the ordering.
+ *
+ * ```
+ * contract Example {
+ *     // Add the library methods
+ *     using EnumerableSet for EnumerableSet.AddressSet;
+ *
+ *     // Declare a set state variable
+ *     EnumerableSet.AddressSet private mySet;
+ * }
+ * ```
+ *
+ * As of v3.0.0, only sets of type `address` (`AddressSet`) and `uint256`
+ * (`UintSet`) are supported.
+ */
+library EnumerableSet {
+    // To implement this library for multiple types with as little code
+    // repetition as possible, we write it in terms of a generic Set type with
+    // bytes32 values.
+    // The Set implementation uses private functions, and user-facing
+    // implementations (such as AddressSet) are just wrappers around the
+    // underlying Set.
+    // This means that we can only create new EnumerableSets for types that fit
+    // in bytes32.
+
+    struct Set {
+        // Storage of set values
+        bytes32[] _values;
+
+        // Position of the value in the `values` array, plus 1 because index 0
+        // means a value is not in the set.
+        mapping (bytes32 => uint256) _indexes;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function _add(Set storage set, bytes32 value) private returns (bool) {
+        if (!_contains(set, value)) {
+            set._values.push(value);
+            // The value is stored at length-1, but we add 1 to all indexes
+            // and use 0 as a sentinel value
+            set._indexes[value] = set._values.length;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function _remove(Set storage set, bytes32 value) private returns (bool) {
+        // We read and store the value's index to prevent multiple reads from the same storage slot
+        uint256 valueIndex = set._indexes[value];
+
+        if (valueIndex != 0) { // Equivalent to contains(set, value)
+            // To delete an element from the _values array in O(1), we swap the element to delete with the last one in
+            // the array, and then remove the last element (sometimes called as 'swap and pop').
+            // This modifies the order of the array, as noted in {at}.
+
+            uint256 toDeleteIndex = valueIndex - 1;
+            uint256 lastIndex = set._values.length - 1;
+
+            // When the value to delete is the last one, the swap operation is unnecessary. However, since this occurs
+            // so rarely, we still do the swap anyway to avoid the gas cost of adding an 'if' statement.
+
+            bytes32 lastvalue = set._values[lastIndex];
+
+            // Move the last value to the index where the value to delete is
+            set._values[toDeleteIndex] = lastvalue;
+            // Update the index for the moved value
+            set._indexes[lastvalue] = toDeleteIndex + 1; // All indexes are 1-based
+
+            // Delete the slot where the moved value was stored
+            set._values.pop();
+
+            // Delete the index for the deleted slot
+            delete set._indexes[value];
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function _contains(Set storage set, bytes32 value) private view returns (bool) {
+        return set._indexes[value] != 0;
+    }
+
+    /**
+     * @dev Returns the number of values on the set. O(1).
+     */
+    function _length(Set storage set) private view returns (uint256) {
+        return set._values.length;
+    }
+
+   /**
+    * @dev Returns the value stored at position `index` in the set. O(1).
+    *
+    * Note that there are no guarantees on the ordering of values inside the
+    * array, and it may change when more values are added or removed.
+    *
+    * Requirements:
+    *
+    * - `index` must be strictly less than {length}.
+    */
+    function _at(Set storage set, uint256 index) private view returns (bytes32) {
+        require(set._values.length > index, "EnumerableSet: index out of bounds");
+        return set._values[index];
+    }
+
+    // AddressSet
+
+    struct AddressSet {
+        Set _inner;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function add(AddressSet storage set, address value) internal returns (bool) {
+        return _add(set._inner, bytes32(uint256(value)));
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function remove(AddressSet storage set, address value) internal returns (bool) {
+        return _remove(set._inner, bytes32(uint256(value)));
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function contains(AddressSet storage set, address value) internal view returns (bool) {
+        return _contains(set._inner, bytes32(uint256(value)));
+    }
+
+    /**
+     * @dev Returns the number of values in the set. O(1).
+     */
+    function length(AddressSet storage set) internal view returns (uint256) {
+        return _length(set._inner);
+    }
+
+   /**
+    * @dev Returns the value stored at position `index` in the set. O(1).
+    *
+    * Note that there are no guarantees on the ordering of values inside the
+    * array, and it may change when more values are added or removed.
+    *
+    * Requirements:
+    *
+    * - `index` must be strictly less than {length}.
+    */
+    function at(AddressSet storage set, uint256 index) internal view returns (address) {
+        return address(uint256(_at(set._inner, index)));
+    }
+
+
+    // UintSet
+
+    struct UintSet {
+        Set _inner;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function add(UintSet storage set, uint256 value) internal returns (bool) {
+        return _add(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function remove(UintSet storage set, uint256 value) internal returns (bool) {
+        return _remove(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function contains(UintSet storage set, uint256 value) internal view returns (bool) {
+        return _contains(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Returns the number of values on the set. O(1).
+     */
+    function length(UintSet storage set) internal view returns (uint256) {
+        return _length(set._inner);
+    }
+
+   /**
+    * @dev Returns the value stored at position `index` in the set. O(1).
+    *
+    * Note that there are no guarantees on the ordering of values inside the
+    * array, and it may change when more values are added or removed.
+    *
+    * Requirements:
+    *
+    * - `index` must be strictly less than {length}.
+    */
+    function at(UintSet storage set, uint256 index) internal view returns (uint256) {
+        return uint256(_at(set._inner, index));
+    }
+}
+
+// File: @openzeppelin/contracts/math/Math.sol
+
+
+
+pragma solidity ^0.6.0;
 
 /**
- * @dev Contract module which allows children to implement an emergency stop
- * mechanism that can be triggered by an authorized account.
- *
- * This module is used through inheritance. It will make available the
- * modifiers `whenNotPaused` and `whenPaused`, which can be applied to
- * the functions of your contract. Note that they will not be pausable by
- * simply including this module, only once the modifiers are put in place.
+ * @dev Standard math utilities missing in the Solidity language.
  */
-contract Pausable is Context {
+library Math {
     /**
-     * @dev Emitted when the pause is triggered by `account`.
+     * @dev Returns the largest of two numbers.
      */
-    event Paused(address account);
-
-    /**
-     * @dev Emitted when the pause is lifted by `account`.
-     */
-    event Unpaused(address account);
-
-    bool private _paused;
-
-    /**
-     * @dev Initializes the contract in unpaused state.
-     */
-    constructor () internal {
-        _paused = false;
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a >= b ? a : b;
     }
 
     /**
-     * @dev Returns true if the contract is paused, and false otherwise.
+     * @dev Returns the smallest of two numbers.
      */
-    function paused() public view returns (bool) {
-        return _paused;
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
     }
 
     /**
-     * @dev Modifier to make a function callable only when the contract is not paused.
-     *
-     * Requirements:
-     *
-     * - The contract must not be paused.
+     * @dev Returns the average of two numbers. The result is rounded towards
+     * zero.
      */
-    modifier whenNotPaused() {
-        require(!_paused, "Pausable: paused");
-        _;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only when the contract is paused.
-     *
-     * Requirements:
-     *
-     * - The contract must be paused.
-     */
-    modifier whenPaused() {
-        require(_paused, "Pausable: not paused");
-        _;
-    }
-
-    /**
-     * @dev Triggers stopped state.
-     *
-     * Requirements:
-     *
-     * - The contract must not be paused.
-     */
-    function _pause() internal virtual whenNotPaused {
-        _paused = true;
-        emit Paused(_msgSender());
-    }
-
-    /**
-     * @dev Returns to normal state.
-     *
-     * Requirements:
-     *
-     * - The contract must be paused.
-     */
-    function _unpause() internal virtual whenPaused {
-        _paused = false;
-        emit Unpaused(_msgSender());
+    function average(uint256 a, uint256 b) internal pure returns (uint256) {
+        // (a + b) / 2 can overflow, so we distribute
+        return (a / 2) + (b / 2) + ((a % 2 + b % 2) / 2);
     }
 }
 
@@ -951,84 +1217,31 @@ contract ReentrancyGuard {
     }
 }
 
-// File: @openzeppelin/contracts/access/Ownable.sol
-
-
+// File: contracts/interfaces/INsure.sol
 
 pragma solidity ^0.6.0;
+pragma experimental ABIEncoderV2;
+interface INsure {
 
-/**
- * @dev Contract module which provides a basic access control mechanism, where
- * there is an account (an owner) that can be granted exclusive access to
- * specific functions.
- *
- * By default, the owner account will be the one that deploys the contract. This
- * can later be changed with {transferOwnership}.
- *
- * This module is used through inheritance. It will make available the modifier
- * `onlyOwner`, which can be applied to your functions to restrict their use to
- * the owner.
- */
- 
-contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial owner.
-     */
-    constructor () internal {
-        address msgSender = _msgSender();
-        _owner = msgSender;
-        emit OwnershipTransferred(address(0), msgSender);
-    }
-
-    /**
-     * @dev Returns the address of the current owner.
-     */
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(_owner == _msgSender(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public virtual onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
+    function burn(uint256 amount)  external ;
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external  returns (bool);
+    function mint(address _to, uint256 _amount) external  returns (bool);
+    function balanceOf(address account) external view returns (uint256);
 }
 
-// File: contracts/CapitalConverter.sol
+// File: contracts/Treasury.sol
 
 /**
- * @dev a contract for convert eth to nETH or token to nToken.
+ * @dev     a contract for locking Nsure Token to be an underwriter.
  *   
- * @notice  there would be a ratio between Token and nToken when emit a claim event.
+ * @notice  the underwriter program would be calculated and recorded by central ways
+            which is too complicated for contracts(gas used etc.)
  */
+
+
+
+
 
 
 
@@ -1039,93 +1252,81 @@ contract Ownable is Context {
 
 pragma solidity ^0.6.0;
 
-contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
+
+
+contract Treasury is Ownable, ReentrancyGuard{
+    
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    
 
     address public constant ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
-    uint256 public maxConvert = 10000e18;
-    address public token;
-    uint256 public tokenDecimal;
 
+    address public signer; 
+    string constant public name = "Treasury";
+    string public constant version = "1";
+    
+    uint256 public depositMax = 1 * 1e6 * 1e18;
+    uint256 public deadlineDuration = 30 minutes;
+    
     address public operator;
-
-    mapping (address => uint256) public depositAt; // in case of flashloan attacks
-
-    constructor(address _token, uint256 _tokenDecimal,string memory name,string memory symbol) public  ERC20(name,symbol)
-    {
-        token           = _token;
-        tokenDecimal    = _tokenDecimal;
-    }
-
-    receive() external payable {
-        revert();
-    }
-
-
-    function smartBalance() public view returns (uint256) {
-        if (token == ETHEREUM) {
-            return address(this).balance;
-        }
-
-        return IERC20(token).balanceOf(address(this));
-    }
-
-    function calculateMintAmount(uint256 _depositAmount) internal view returns (uint256) {
-        if (totalSupply() == 0) {
-            uint256 value = _depositAmount.mul(uint256(1e18)).div(10**tokenDecimal);
-            return value;
-        }
-
-        uint256 initialBalance = smartBalance().sub(_depositAmount);
-        return _depositAmount.mul(totalSupply()).div(initialBalance);
+    
+    /// @notice A record of states for signing / validating signatures
+    mapping (address => uint256) public nonces;
+    
+    struct DivCurrency {
+        address divCurrency;
+        uint256 limit;
     }
     
-    // convert ETH or USDx to nETH/nUSDx
-    function convert(uint256 _amount) external payable nonReentrant whenNotPaused {
-        require(_amount > 0, "CapitalConverter: Cannot stake 0.");
-        require(_amount <= maxConvert, "exceeding the maximum limit");
+    DivCurrency[] public divCurrencies;
+    
 
-        depositAt[msg.sender] = block.number;
+    INsure public Nsure;
+    uint256 private _totalSupply;
+    uint256 public claimDuration = 30 minutes;
 
-        if (token != ETHEREUM) {
-            require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
-            IERC20(token).safeTransferFrom(_msgSender(), address(this), _amount);
-        } else {
-            require(_amount == msg.value, "CapitalConverter: Incorrect eth amount.");
-        }
+    mapping(address => uint256) private _balances;
+    mapping(address => uint256) public claimAt;
 
-        uint256 value = calculateMintAmount(_amount);
-        _mint(_msgSender(), value);
-        
-        // emit event
-        emit eMint(_msgSender(), _amount, value);
+   
+
+    modifier onlyOperator() {
+        require(msg.sender == operator,"not operator");
+        _;
     }
 
-    // withdraw the ETH or USDx
-    function exit(uint256 _value) external nonReentrant whenNotPaused {
-        require(balanceOf(_msgSender()) >= _value && _value > 0, 
-                "CapitalConverter: insufficient assets");
+      /// @notice The EIP-712 typehash for the contract's domain
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
-        require(depositAt[msg.sender] > 0, "No deposit history");
-        require(depositAt[msg.sender] < block.number, "Reject flashloan");
+ 
+    /// @notice The EIP-712 typehash for the permit struct used by the contract
+    bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(address account,uint256 currency,uint256 amount,uint256 nonce,uint256 deadline)");
 
-        uint256 value = _value.mul(smartBalance()).div(totalSupply());
-        if (token != ETHEREUM) {
-            IERC20(token).safeTransfer(_msgSender(), value);
-        } else {
-            _msgSender().transfer(value);
-        }
 
-        _burn(_msgSender(), _value);
-        
-        // emit event
-        emit eBurn(_msgSender(), _value, value);
+    /// @notice The EIP-712 typehash for the permit struct used by the contract
+    bytes32 public constant WITHDRAW_TYPEHASH = keccak256("Withdraw(address account,uint256 amount,uint256 nonce,uint256 deadline)");
+
+    constructor(address _signer, address _nsure)public {
+        Nsure = INsure(_nsure);
+        signer = _signer;
     }
 
-    function payouts(address payable _to, uint256 _amount) external onlyOperator {
-        require(_to != address(0),"_to is zero");
+    receive() external payable {}
+  
+    function totalSupply() external view returns (uint256) {
+        return _totalSupply;
+    }
+
+    function balanceOf(address account) external view returns (uint256) {
+        return _balances[account];
+    }
+
+
+  // payout for claiming
+    function payouts(address payable _to, uint256 _amount, address token) external onlyOperator {
+         require(_to != address(0),"_to is zero");
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
         } else {
@@ -1135,26 +1336,142 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit ePayouts(_to, _amount);
     }
 
-    modifier onlyOperator() {
-        require(msg.sender == operator, "not operator");
-        _;
+
+    // return my token balance
+    function myBalanceOf(address tokenAddress) external view returns(uint256) {
+        return IERC20(tokenAddress).balanceOf(address(this));
+    }
+    
+    function setClaimDuration(uint256 _duration)external onlyOwner {
+        require(claimDuration != _duration, "the same duration");
+        claimDuration = _duration;
+        emit SetClaimDuration(_duration);
     }
 
-    function setOperator(address _operator) external onlyOwner {
-        require(_operator != address(0),"_operator is zero");
+    function setSigner(address _signer) external onlyOwner {
+        require(_signer != address(0),"_signer is zero");
+        signer = _signer;
+        emit SetSigner(_signer);
+    }
+ 
+    function setOperator(address _operator) external onlyOwner {  
+        require(_operator != address(0),"_operator is zero"); 
         operator = _operator;
-        emit eSetOperator(_operator);
+        emit SetOperator(_operator);
     }
 
-    function setMaxConvert(uint256 _max) external onlyOwner {
-        maxConvert = _max;
-        emit eSetMaxConvert(_max);
+    function setDeadlineDuration(uint256 _duration) external onlyOwner {
+        deadlineDuration = _duration;
+        emit SetDeadlineDuration(_duration);
+    }
+ 
+    function getDivCurrencyLength() external view returns (uint256) {
+        return divCurrencies.length;
+    }
+
+    function addDivCurrency(address _currency,uint256 _limit) external onlyOwner {
+        require(_currency != address(0),"_currency is zero");
+        divCurrencies.push(DivCurrency({divCurrency:_currency, limit:_limit}));
+    }
+
+    function setDepositMax(uint256 _max) external onlyOwner {
+        depositMax = _max;
+        emit SetDepositMax(_max);
+    }
+
+    function deposit(uint256 amount) external nonReentrant{
+        require(amount > 0, "Cannot stake 0");
+        require(amount <= depositMax,"exceeding the maximum limit");
+
+        _totalSupply = _totalSupply.add(amount);
+        _balances[msg.sender] = _balances[msg.sender].add(amount);
+
+        // Nsure.transferFrom(msg.sender, address(this), amount);
+        Nsure.transferFrom(msg.sender,address(this),amount);
+        emit Deposit(msg.sender, amount);
+    }
+
+    function withdraw(uint256 _amount,uint256 deadline,uint8 v, bytes32 r, bytes32 s) 
+        external nonReentrant
+    {
+        require(_balances[msg.sender] >= _amount,"insufficient");
+
+        bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
+                                        keccak256(bytes(version)), getChainId(), address(this)));
+        bytes32 structHash  = keccak256(abi.encode(WITHDRAW_TYPEHASH, address(msg.sender), 
+                                _amount,nonces[msg.sender]++, deadline));
+        bytes32 digest      = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        address signatory = ecrecover(digest, v, r, s);
+
+        require(signatory != address(0), "invalid signature");
+        require(signatory == signer, "unauthorized");
+        require(block.timestamp <= deadline, "signature expired");
+
+        _balances[msg.sender] = _balances[msg.sender].sub(_amount);
+        Nsure.transfer(msg.sender,_amount);
+        emit Withdraw(msg.sender,_amount,nonces[msg.sender]-1);
+    }
+
+    // burn 1/2 for claiming 
+    function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts) 
+        external onlyOperator 
+    {
+        require(_burnUsers.length == _amounts.length, "not equal");
+
+        for(uint256 i = 0; i<_burnUsers.length; i++) {
+            require(_balances[_burnUsers[i]] >= _amounts[i], "insufficient");
+
+            _balances[_burnUsers[i]] = _balances[_burnUsers[i]].sub(_amounts[i]);
+            Nsure.burn(_amounts[i]);
+
+            emit Burn(_burnUsers[i],_amounts[i]);
+        }
+    }
+
+    function claim(uint256 _amount, uint256 currency, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external nonReentrant
+    {
+        require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
+        require(block.timestamp.add(deadlineDuration) > deadline, "expired");
+        require(_amount <= divCurrencies[currency].limit, "exceeding the maximum limit");
+        require(block.timestamp <= deadline, "signature expired");
+
+        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
+        bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), currency, _amount,nonces[msg.sender]++, deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        address signatory = ecrecover(digest, v, r, s);
+
+        require(signatory != address(0), "invalid signature");
+        require(signatory == signer, "unauthorized");
+        
+
+        claimAt[msg.sender] = block.timestamp;
+        IERC20(divCurrencies[currency].divCurrency).safeTransfer(msg.sender,_amount);
+
+        emit Claim(msg.sender,currency,_amount,nonces[msg.sender] -1);
+    }
+
+    function getChainId() internal pure returns (uint256) {
+        uint256 chainId;
+        assembly { chainId := chainid() }
+        return chainId;
     }
 
 
-    event eMint(address indexed sender, uint256 input, uint256 amount);
-    event eBurn(address indexed sender, uint256 amount, uint256 output);
+   
+
+
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user,  uint256 amount,uint256 nonce);
+    event Claim(address indexed user,uint256 currency,uint256 amount,uint256 nonce);
+    event Burn(address indexed user,uint256 amount);
+    event SetOperator(address indexed operator);
+    event SetClaimDuration(uint256 duration);
+    event SetSigner(address indexed signer);
+    event SetDeadlineDuration(uint256 deadlineDuration);
+    event SetDepositMax(uint256 depositMax);
+        /////////// events /////////////
     event ePayouts(address indexed to, uint256 amount);
     event eSetOperator(address indexed operator);
-    event eSetMaxConvert(uint256 max);
 }

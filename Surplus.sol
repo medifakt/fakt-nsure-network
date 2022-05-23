@@ -2,33 +2,6 @@
 
 pragma solidity ^0.6.0;
 
-/*
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they should not be accessed in such a direct
- * manner, since when dealing with GSN meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-abstract contract Context {
-    function _msgSender() internal view virtual returns (address payable) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view virtual returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
-}
-
-// File: @openzeppelin/contracts/token/ERC20/IERC20.sol
-
-
-
-pragma solidity ^0.6.0;
-
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
@@ -227,6 +200,7 @@ library SafeMath {
         require(b > 0, errorMessage);
         uint256 c = a / b;
         // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
         return c;
     }
 
@@ -261,6 +235,33 @@ library SafeMath {
     function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
         require(b != 0, errorMessage);
         return a % b;
+    }
+}
+
+// File: @openzeppelin/contracts/GSN/Context.sol
+
+
+
+pragma solidity ^0.6.0;
+
+/*
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with GSN meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes memory) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        return msg.data;
     }
 }
 
@@ -717,6 +718,77 @@ contract ERC20 is Context, IERC20 {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }
 
+// File: @openzeppelin/contracts/access/Ownable.sol
+
+
+
+pragma solidity ^0.6.0;
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * By default, the owner account will be the one that deploys the contract. This
+ * can later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
+ 
+contract Ownable is Context {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    constructor () internal {
+        address msgSender = _msgSender();
+        _owner = msgSender;
+        emit OwnershipTransferred(address(0), msgSender);
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(_owner == _msgSender(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
 // File: @openzeppelin/contracts/token/ERC20/SafeERC20.sol
 
 
@@ -794,240 +866,12 @@ library SafeERC20 {
     }
 }
 
-// File: @openzeppelin/contracts/utils/Pausable.sol
-
-
-
-pragma solidity ^0.6.0;
-
+// File: contracts/Surplus.sol
 
 /**
- * @dev Contract module which allows children to implement an emergency stop
- * mechanism that can be triggered by an authorized account.
+ * @dev Surplus Pool which just does receive/payout things.
  *
- * This module is used through inheritance. It will make available the
- * modifiers `whenNotPaused` and `whenPaused`, which can be applied to
- * the functions of your contract. Note that they will not be pausable by
- * simply including this module, only once the modifiers are put in place.
- */
-contract Pausable is Context {
-    /**
-     * @dev Emitted when the pause is triggered by `account`.
-     */
-    event Paused(address account);
-
-    /**
-     * @dev Emitted when the pause is lifted by `account`.
-     */
-    event Unpaused(address account);
-
-    bool private _paused;
-
-    /**
-     * @dev Initializes the contract in unpaused state.
-     */
-    constructor () internal {
-        _paused = false;
-    }
-
-    /**
-     * @dev Returns true if the contract is paused, and false otherwise.
-     */
-    function paused() public view returns (bool) {
-        return _paused;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only when the contract is not paused.
-     *
-     * Requirements:
-     *
-     * - The contract must not be paused.
-     */
-    modifier whenNotPaused() {
-        require(!_paused, "Pausable: paused");
-        _;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only when the contract is paused.
-     *
-     * Requirements:
-     *
-     * - The contract must be paused.
-     */
-    modifier whenPaused() {
-        require(_paused, "Pausable: not paused");
-        _;
-    }
-
-    /**
-     * @dev Triggers stopped state.
-     *
-     * Requirements:
-     *
-     * - The contract must not be paused.
-     */
-    function _pause() internal virtual whenNotPaused {
-        _paused = true;
-        emit Paused(_msgSender());
-    }
-
-    /**
-     * @dev Returns to normal state.
-     *
-     * Requirements:
-     *
-     * - The contract must be paused.
-     */
-    function _unpause() internal virtual whenPaused {
-        _paused = false;
-        emit Unpaused(_msgSender());
-    }
-}
-
-// File: @openzeppelin/contracts/utils/ReentrancyGuard.sol
-
-
-
-pragma solidity ^0.6.0;
-
-/**
- * @dev Contract module that helps prevent reentrant calls to a function.
- *
- * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
- * available, which can be applied to functions to make sure there are no nested
- * (reentrant) calls to them.
- *
- * Note that because there is a single `nonReentrant` guard, functions marked as
- * `nonReentrant` may not call one another. This can be worked around by making
- * those functions `private`, and then adding `external` `nonReentrant` entry
- * points to them.
- *
- * TIP: If you would like to learn more about reentrancy and alternative ways
- * to protect against it, check out our blog post
- * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
- */
-contract ReentrancyGuard {
-    // Booleans are more expensive than uint256 or any type that takes up a full
-    // word because each write operation emits an extra SLOAD to first read the
-    // slot's contents, replace the bits taken up by the boolean, and then write
-    // back. This is the compiler's defense against contract upgrades and
-    // pointer aliasing, and it cannot be disabled.
-
-    // The values being non-zero value makes deployment a bit more expensive,
-    // but in exchange the refund on every call to nonReentrant will be lower in
-    // amount. Since refunds are capped to a percentage of the total
-    // transaction's gas, it is best to keep them low in cases like this one, to
-    // increase the likelihood of the full refund coming into effect.
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-
-    uint256 private _status;
-
-    constructor () internal {
-        _status = _NOT_ENTERED;
-    }
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     * Calling a `nonReentrant` function from another `nonReentrant`
-     * function is not supported. It is possible to prevent this from happening
-     * by making the `nonReentrant` function external, and make it call a
-     * `private` function that does the actual work.
-     */
-    modifier nonReentrant() {
-        // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-
-        // Any calls to nonReentrant after this point will fail
-        _status = _ENTERED;
-
-        _;
-
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
-        _status = _NOT_ENTERED;
-    }
-}
-
-// File: @openzeppelin/contracts/access/Ownable.sol
-
-
-
-pragma solidity ^0.6.0;
-
-/**
- * @dev Contract module which provides a basic access control mechanism, where
- * there is an account (an owner) that can be granted exclusive access to
- * specific functions.
- *
- * By default, the owner account will be the one that deploys the contract. This
- * can later be changed with {transferOwnership}.
- *
- * This module is used through inheritance. It will make available the modifier
- * `onlyOwner`, which can be applied to your functions to restrict their use to
- * the owner.
- */
- 
-contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial owner.
-     */
-    constructor () internal {
-        address msgSender = _msgSender();
-        _owner = msgSender;
-        emit OwnershipTransferred(address(0), msgSender);
-    }
-
-    /**
-     * @dev Returns the address of the current owner.
-     */
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(_owner == _msgSender(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public virtual onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-// File: contracts/CapitalConverter.sol
-
-/**
- * @dev a contract for convert eth to nETH or token to nToken.
- *   
- * @notice  there would be a ratio between Token and nToken when emit a claim event.
+ * @dev A ratio(commonly would be 40%) of the cover cost would be sent to surplus pool for claiming.
  */
 
 
@@ -1035,96 +879,23 @@ contract Ownable is Context {
 
 
 
+pragma solidity >= 0.6.0;
 
 
-pragma solidity ^0.6.0;
-
-contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
-    using SafeMath for uint256;
+contract Surplus is Ownable {
     using SafeERC20 for IERC20;
-
+ 
     address public constant ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-
-    uint256 public maxConvert = 10000e18;
-    address public token;
-    uint256 public tokenDecimal;
-
+  
     address public operator;
 
-    mapping (address => uint256) public depositAt; // in case of flashloan attacks
-
-    constructor(address _token, uint256 _tokenDecimal,string memory name,string memory symbol) public  ERC20(name,symbol)
-    {
-        token           = _token;
-        tokenDecimal    = _tokenDecimal;
+    // return my token balance
+    function myBalanceOf(address tokenAddress) external view returns(uint256) {
+        return IERC20(tokenAddress).balanceOf(address(this));
     }
 
-    receive() external payable {
-        revert();
-    }
-
-
-    function smartBalance() public view returns (uint256) {
-        if (token == ETHEREUM) {
-            return address(this).balance;
-        }
-
-        return IERC20(token).balanceOf(address(this));
-    }
-
-    function calculateMintAmount(uint256 _depositAmount) internal view returns (uint256) {
-        if (totalSupply() == 0) {
-            uint256 value = _depositAmount.mul(uint256(1e18)).div(10**tokenDecimal);
-            return value;
-        }
-
-        uint256 initialBalance = smartBalance().sub(_depositAmount);
-        return _depositAmount.mul(totalSupply()).div(initialBalance);
-    }
-    
-    // convert ETH or USDx to nETH/nUSDx
-    function convert(uint256 _amount) external payable nonReentrant whenNotPaused {
-        require(_amount > 0, "CapitalConverter: Cannot stake 0.");
-        require(_amount <= maxConvert, "exceeding the maximum limit");
-
-        depositAt[msg.sender] = block.number;
-
-        if (token != ETHEREUM) {
-            require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
-            IERC20(token).safeTransferFrom(_msgSender(), address(this), _amount);
-        } else {
-            require(_amount == msg.value, "CapitalConverter: Incorrect eth amount.");
-        }
-
-        uint256 value = calculateMintAmount(_amount);
-        _mint(_msgSender(), value);
-        
-        // emit event
-        emit eMint(_msgSender(), _amount, value);
-    }
-
-    // withdraw the ETH or USDx
-    function exit(uint256 _value) external nonReentrant whenNotPaused {
-        require(balanceOf(_msgSender()) >= _value && _value > 0, 
-                "CapitalConverter: insufficient assets");
-
-        require(depositAt[msg.sender] > 0, "No deposit history");
-        require(depositAt[msg.sender] < block.number, "Reject flashloan");
-
-        uint256 value = _value.mul(smartBalance()).div(totalSupply());
-        if (token != ETHEREUM) {
-            IERC20(token).safeTransfer(_msgSender(), value);
-        } else {
-            _msgSender().transfer(value);
-        }
-
-        _burn(_msgSender(), _value);
-        
-        // emit event
-        emit eBurn(_msgSender(), _value, value);
-    }
-
-    function payouts(address payable _to, uint256 _amount) external onlyOperator {
+    // payout for claiming
+    function payouts(address payable _to, uint256 _amount,address token) external onlyOperator {
         require(_to != address(0),"_to is zero");
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
@@ -1135,26 +906,22 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
         emit ePayouts(_to, _amount);
     }
 
-    modifier onlyOperator() {
-        require(msg.sender == operator, "not operator");
-        _;
-    }
+    receive() external payable {}
+    
 
-    function setOperator(address _operator) external onlyOwner {
+    function setOperator(address _operator) external onlyOwner {   
         require(_operator != address(0),"_operator is zero");
         operator = _operator;
         emit eSetOperator(_operator);
     }
 
-    function setMaxConvert(uint256 _max) external onlyOwner {
-        maxConvert = _max;
-        emit eSetMaxConvert(_max);
+    modifier onlyOperator() {
+        require(msg.sender == operator,"not operator");
+        _;
     }
 
-
-    event eMint(address indexed sender, uint256 input, uint256 amount);
-    event eBurn(address indexed sender, uint256 amount, uint256 output);
+    /////////// events /////////////
     event ePayouts(address indexed to, uint256 amount);
     event eSetOperator(address indexed operator);
-    event eSetMaxConvert(uint256 max);
+ 
 }
