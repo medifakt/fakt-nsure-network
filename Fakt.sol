@@ -1,25 +1,444 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.2;
+
+/**
+ * @dev Library for managing
+ * https://en.wikipedia.org/wiki/Set_(abstract_data_type)[sets] of primitive
+ * types.
+ *
+ * Sets have the following properties:
+ *
+ * - Elements are added, removed, and checked for existence in constant time
+ * (O(1)).
+ * - Elements are enumerated in O(n). No guarantees are made on the ordering.
+ *
+ * ```
+ * contract Example {
+ *     // Add the library methods
+ *     using EnumerableSet for EnumerableSet.AddressSet;
+ *
+ *     // Declare a set state variable
+ *     EnumerableSet.AddressSet private mySet;
+ * }
+ * ```
+ *
+ * As of v3.3.0, sets of type `bytes32` (`Bytes32Set`), `address` (`AddressSet`)
+ * and `uint256` (`UintSet`) are supported.
+ *
+ * [WARNING]
+ * ====
+ *  Trying to delete such a structure from storage will likely result in data corruption, rendering the structure unusable.
+ *  See https://github.com/ethereum/solidity/pull/11843[ethereum/solidity#11843] for more info.
+ *
+ *  In order to clean an EnumerableSet, you can either remove all elements one by one or create a fresh instance using an array of EnumerableSet.
+ * ====
+ */
+library EnumerableSet {
+    // To implement this library for multiple types with as little code
+    // repetition as possible, we write it in terms of a generic Set type with
+    // bytes32 values.
+    // The Set implementation uses private functions, and user-facing
+    // implementations (such as AddressSet) are just wrappers around the
+    // underlying Set.
+    // This means that we can only create new EnumerableSets for types that fit
+    // in bytes32.
+
+    struct Set {
+        // Storage of set values
+        bytes32[] _values;
+        // Position of the value in the `values` array, plus 1 because index 0
+        // means a value is not in the set.
+        mapping(bytes32 => uint256) _indexes;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function _add(Set storage set, bytes32 value) private returns (bool) {
+        if (!_contains(set, value)) {
+            set._values.push(value);
+            // The value is stored at length-1, but we add 1 to all indexes
+            // and use 0 as a sentinel value
+            set._indexes[value] = set._values.length;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function _remove(Set storage set, bytes32 value) private returns (bool) {
+        // We read and store the value's index to prevent multiple reads from the same storage slot
+        uint256 valueIndex = set._indexes[value];
+
+        if (valueIndex != 0) {
+            // Equivalent to contains(set, value)
+            // To delete an element from the _values array in O(1), we swap the element to delete with the last one in
+            // the array, and then remove the last element (sometimes called as 'swap and pop').
+            // This modifies the order of the array, as noted in {at}.
+
+            uint256 toDeleteIndex = valueIndex - 1;
+            uint256 lastIndex = set._values.length - 1;
+
+            if (lastIndex != toDeleteIndex) {
+                bytes32 lastValue = set._values[lastIndex];
+
+                // Move the last value to the index where the value to delete is
+                set._values[toDeleteIndex] = lastValue;
+                // Update the index for the moved value
+                set._indexes[lastValue] = valueIndex; // Replace lastValue's index to valueIndex
+            }
+
+            // Delete the slot where the moved value was stored
+            set._values.pop();
+
+            // Delete the index for the deleted slot
+            delete set._indexes[value];
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function _contains(Set storage set, bytes32 value) private view returns (bool) {
+        return set._indexes[value] != 0;
+    }
+
+    /**
+     * @dev Returns the number of values on the set. O(1).
+     */
+    function _length(Set storage set) private view returns (uint256) {
+        return set._values.length;
+    }
+
+    /**
+     * @dev Returns the value stored at position `index` in the set. O(1).
+     *
+     * Note that there are no guarantees on the ordering of values inside the
+     * array, and it may change when more values are added or removed.
+     *
+     * Requirements:
+     *
+     * - `index` must be strictly less than {length}.
+     */
+    function _at(Set storage set, uint256 index) private view returns (bytes32) {
+        return set._values[index];
+    }
+
+    /**
+     * @dev Return the entire set in an array
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
+    function _values(Set storage set) private view returns (bytes32[] memory) {
+        return set._values;
+    }
+
+    // Bytes32Set
+
+    struct Bytes32Set {
+        Set _inner;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function add(Bytes32Set storage set, bytes32 value) internal returns (bool) {
+        return _add(set._inner, value);
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function remove(Bytes32Set storage set, bytes32 value) internal returns (bool) {
+        return _remove(set._inner, value);
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function contains(Bytes32Set storage set, bytes32 value) internal view returns (bool) {
+        return _contains(set._inner, value);
+    }
+
+    /**
+     * @dev Returns the number of values in the set. O(1).
+     */
+    function length(Bytes32Set storage set) internal view returns (uint256) {
+        return _length(set._inner);
+    }
+
+    /**
+     * @dev Returns the value stored at position `index` in the set. O(1).
+     *
+     * Note that there are no guarantees on the ordering of values inside the
+     * array, and it may change when more values are added or removed.
+     *
+     * Requirements:
+     *
+     * - `index` must be strictly less than {length}.
+     */
+    function at(Bytes32Set storage set, uint256 index) internal view returns (bytes32) {
+        return _at(set._inner, index);
+    }
+
+    /**
+     * @dev Return the entire set in an array
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
+    function values(Bytes32Set storage set) internal view returns (bytes32[] memory) {
+        return _values(set._inner);
+    }
+
+    // AddressSet
+
+    struct AddressSet {
+        Set _inner;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function add(AddressSet storage set, address value) internal returns (bool) {
+        return _add(set._inner, bytes32(uint256(uint160(value))));
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function remove(AddressSet storage set, address value) internal returns (bool) {
+        return _remove(set._inner, bytes32(uint256(uint160(value))));
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function contains(AddressSet storage set, address value) internal view returns (bool) {
+        return _contains(set._inner, bytes32(uint256(uint160(value))));
+    }
+
+    /**
+     * @dev Returns the number of values in the set. O(1).
+     */
+    function length(AddressSet storage set) internal view returns (uint256) {
+        return _length(set._inner);
+    }
+
+    /**
+     * @dev Returns the value stored at position `index` in the set. O(1).
+     *
+     * Note that there are no guarantees on the ordering of values inside the
+     * array, and it may change when more values are added or removed.
+     *
+     * Requirements:
+     *
+     * - `index` must be strictly less than {length}.
+     */
+    function at(AddressSet storage set, uint256 index) internal view returns (address) {
+        return address(uint160(uint256(_at(set._inner, index))));
+    }
+
+    /**
+     * @dev Return the entire set in an array
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
+    function values(AddressSet storage set) internal view returns (address[] memory) {
+        bytes32[] memory store = _values(set._inner);
+        address[] memory result;
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := store
+        }
+
+        return result;
+    }
+
+    // UintSet
+
+    struct UintSet {
+        Set _inner;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function add(UintSet storage set, uint256 value) internal returns (bool) {
+        return _add(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function remove(UintSet storage set, uint256 value) internal returns (bool) {
+        return _remove(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function contains(UintSet storage set, uint256 value) internal view returns (bool) {
+        return _contains(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Returns the number of values on the set. O(1).
+     */
+    function length(UintSet storage set) internal view returns (uint256) {
+        return _length(set._inner);
+    }
+
+    /**
+     * @dev Returns the value stored at position `index` in the set. O(1).
+     *
+     * Note that there are no guarantees on the ordering of values inside the
+     * array, and it may change when more values are added or removed.
+     *
+     * Requirements:
+     *
+     * - `index` must be strictly less than {length}.
+     */
+    function at(UintSet storage set, uint256 index) internal view returns (uint256) {
+        return uint256(_at(set._inner, index));
+    }
+
+    /**
+     * @dev Return the entire set in an array
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
+    function values(UintSet storage set) internal view returns (uint256[] memory) {
+        bytes32[] memory store = _values(set._inner);
+        uint256[] memory result;
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := store
+        }
+
+        return result;
+    }
+}
+
+
+abstract contract Context {
+    function _msgSender() internal view virtual returns (address) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes calldata) {
+        return msg.data;
+    }
+}
+
+abstract contract Ownable is Context {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    constructor() {
+        _transferOwnership(_msgSender());
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
+
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
 interface IERC20 {
-    /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
-     * another (`to`).
-     *
-     * Note that `value` may be zero.
-     */
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-     * a call to {approve}. `value` is the new allowance.
-     */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-
     /**
      * @dev Returns the amount of tokens in existence.
      */
@@ -31,13 +450,13 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 
     /**
-     * @dev Moves `amount` tokens from the caller's account to `to`.
+     * @dev Moves `amount` tokens from the caller's account to `recipient`.
      *
      * Returns a boolean value indicating whether the operation succeeded.
      *
      * Emits a {Transfer} event.
      */
-    function transfer(address to, uint256 amount) external returns (bool);
+    function transfer(address recipient, uint256 amount) external returns (bool);
 
     /**
      * @dev Returns the remaining number of tokens that `spender` will be
@@ -65,7 +484,7 @@ interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
 
     /**
-     * @dev Moves `amount` tokens from `from` to `to` using the
+     * @dev Moves `amount` tokens from `sender` to `recipient` using the
      * allowance mechanism. `amount` is then deducted from the caller's
      * allowance.
      *
@@ -73,11 +492,21 @@ interface IERC20 {
      *
      * Emits a {Transfer} event.
      */
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Emitted when `value` tokens are moved from one account (`from`) to
+     * another (`to`).
+     *
+     * Note that `value` may be zero.
+     */
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /**
+     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * a call to {approve}. `value` is the new allowance.
+     */
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
 /**
@@ -540,178 +969,6 @@ library Address {
 }
 
 /**
- * @title SafeERC20
- * @dev Wrappers around ERC20 operations that throw on failure (when the token
- * contract returns false). Tokens that return no value (and instead revert or
- * throw on failure) are also supported, non-reverting calls are assumed to be
- * successful.
- * To use this library you can add a `using SafeERC20 for IERC20;` statement to your contract,
- * which allows you to call the safe operations as `token.safeTransfer(...)`, etc.
- */
-library SafeERC20 {
-    using Address for address;
-
-    function safeTransfer(
-        IERC20 token,
-        address to,
-        uint256 value
-    ) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
-    }
-
-    function safeTransferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
-    }
-
-    /**
-     * @dev Deprecated. This function has issues similar to the ones found in
-     * {IERC20-approve}, and its usage is discouraged.
-     *
-     * Whenever possible, use {safeIncreaseAllowance} and
-     * {safeDecreaseAllowance} instead.
-     */
-    function safeApprove(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        // safeApprove should only be called when setting an initial allowance,
-        // or when resetting it to zero. To increase and decrease it, use
-        // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
-        require(
-            (value == 0) || (token.allowance(address(this), spender) == 0),
-            "SafeERC20: approve from non-zero to non-zero allowance"
-        );
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
-    }
-
-    function safeIncreaseAllowance(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        uint256 newAllowance = token.allowance(address(this), spender) + value;
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
-    }
-
-    function safeDecreaseAllowance(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        unchecked {
-            uint256 oldAllowance = token.allowance(address(this), spender);
-            require(oldAllowance >= value, "SafeERC20: decreased allowance below zero");
-            uint256 newAllowance = oldAllowance - value;
-            _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
-        }
-    }
-
-    /**
-     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract), relaxing the requirement
-     * on the return value: the return value is optional (but if data is returned, it must not be false).
-     * @param token The token targeted by the call.
-     * @param data The call data (encoded using abi.encode or one of its variants).
-     */
-    function _callOptionalReturn(IERC20 token, bytes memory data) private {
-        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
-        // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
-        // the target address contains contract code and also asserts for success in the low-level call.
-
-        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
-        if (returndata.length > 0) {
-            // Return data is optional
-            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
-        }
-    }
-}
-
-/**
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they should not be accessed in such a direct
- * manner, since when dealing with meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-abstract contract Context {
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view virtual returns (bytes calldata) {
-        return msg.data;
-    }
-}
-
-abstract contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial owner.
-     */
-    constructor() {
-        _transferOwnership(_msgSender());
-    }
-
-    /**
-     * @dev Returns the address of the current owner.
-     */
-    function owner() public view virtual returns (address) {
-        return _owner;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(owner() == _msgSender(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public virtual onlyOwner {
-        _transferOwnership(address(0));
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        _transferOwnership(newOwner);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
-     */
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = _owner;
-        _owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
-    }
-}
-
-
-
-/**
  * @dev Implementation of the {IERC20} interface.
  *
  * This implementation is agnostic to the way tokens are created. This means
@@ -1086,606 +1343,64 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     ) internal virtual {}
 }
 
-/**
- * @dev Contract module which allows children to implement an emergency stop
- * mechanism that can be triggered by an authorized account.
- *
- * This module is used through inheritance. It will make available the
- * modifiers `whenNotPaused` and `whenPaused`, which can be applied to
- * the functions of your contract. Note that they will not be pausable by
- * simply including this module, only once the modifiers are put in place.
- */
-abstract contract Pausable is Context {
-    /**
-     * @dev Emitted when the pause is triggered by `account`.
-     */
-    event Paused(address account);
 
-    /**
-     * @dev Emitted when the pause is lifted by `account`.
-     */
-    event Unpaused(address account);
-
-    bool private _paused;
-
-    /**
-     * @dev Initializes the contract in unpaused state.
-     */
-    constructor() {
-        _paused = false;
-    }
-
-    /**
-     * @dev Returns true if the contract is paused, and false otherwise.
-     */
-    function paused() public view virtual returns (bool) {
-        return _paused;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only when the contract is not paused.
-     *
-     * Requirements:
-     *
-     * - The contract must not be paused.
-     */
-    modifier whenNotPaused() {
-        require(!paused(), "Pausable: paused");
-        _;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only when the contract is paused.
-     *
-     * Requirements:
-     *
-     * - The contract must be paused.
-     */
-    modifier whenPaused() {
-        require(paused(), "Pausable: not paused");
-        _;
-    }
-
-    /**
-     * @dev Triggers stopped state.
-     *
-     * Requirements:
-     *
-     * - The contract must not be paused.
-     */
-    function _pause() internal virtual whenNotPaused {
-        _paused = true;
-        emit Paused(_msgSender());
-    }
-
-    /**
-     * @dev Returns to normal state.
-     *
-     * Requirements:
-     *
-     * - The contract must be paused.
-     */
-    function _unpause() internal virtual whenPaused {
-        _paused = false;
-        emit Unpaused(_msgSender());
-    }
-}
 
 /**
- * @dev Contract module that helps prevent reentrant calls to a function.
+ * @author  Medifakt.network Team
  *
- * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
- * available, which can be applied to functions to make sure there are no nested
- * (reentrant) calls to them.
- *
- * Note that because there is a single `nonReentrant` guard, functions marked as
- * `nonReentrant` may not call one another. This can be worked around by making
- * those functions `private`, and then adding `external` `nonReentrant` entry
- * points to them.
- *
- * TIP: If you would like to learn more about reentrancy and alternative ways
- * to protect against it, check out our blog post
- * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
- */
-abstract contract ReentrancyGuard {
-    // Booleans are more expensive than uint256 or any type that takes up a full
-    // word because each write operation emits an extra SLOAD to first read the
-    // slot's contents, replace the bits taken up by the boolean, and then write
-    // back. This is the compiler's defense against contract upgrades and
-    // pointer aliasing, and it cannot be disabled.
-
-    // The values being non-zero value makes deployment a bit more expensive,
-    // but in exchange the refund on every call to nonReentrant will be lower in
-    // amount. Since refunds are capped to a percentage of the total
-    // transaction's gas, it is best to keep them low in cases like this one, to
-    // increase the likelihood of the full refund coming into effect.
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-
-    uint256 private _status;
-
-    constructor() {
-        _status = _NOT_ENTERED;
-    }
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     * Calling a `nonReentrant` function from another `nonReentrant`
-     * function is not supported. It is possible to prevent this from happening
-     * by making the `nonReentrant` function external, and making it call a
-     * `private` function that does the actual work.
-     */
-    modifier nonReentrant() {
-        // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-
-        // Any calls to nonReentrant after this point will fail
-        _status = _ENTERED;
-
-        _;
-
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
-        _status = _NOT_ENTERED;
-    }
-}
-
-
-interface IFakt {
-
-    function burn(uint256 amount)  external ;
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount) external  returns (bool);
-    function mint(address _to, uint256 _amount) external  returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-}
-
-/**
- * @dev Capital mining contract. Need stake here to earn rewards after converting to nTokens.
+ * @dev     Contract for Fakt token with burn support
  */
 
-contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
+
+// Fakt erc20 Token Contract.
+contract Fakt is Ownable, ERC20 {
 
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
 
-    address public signer;
-    string public constant name = "CapitalStake";
-    string public constant version = "1";
-    // Info of each user.
-    struct UserInfo {
-        uint256 amount;     // How many  tokens the user has provided.
-        uint256 rewardDebt; // Reward debt. See explanation below.
-        uint256 reward;
-        uint256 pendingWithdrawal;  // payments available for withdrawal by an investor
-        uint256 pendingAt;
+    uint256 private constant preMineSupply = 45 * 1e6 * 1e18;      // pre-mine
+    uint256 private constant maxSupply = 100 * 1e6 * 1e18;     // the total supply
+    address private constant medifaktAdmin = 0x5Ba189D1A3E74cf3d1D38ad81F3d75cbFdbdb5bf;
+
+    // for minters
+    using EnumerableSet for EnumerableSet.AddressSet;
+    EnumerableSet.AddressSet private _minters;
+
+
+    constructor()  ERC20("Medifakt Network Token", "Fakt") {
+        _mint(medifaktAdmin, preMineSupply);
     }
 
-    // Info of each pool.
-    struct PoolInfo {
-        uint256 amount;             //Total Deposit of token
-        IERC20 lpToken;             // Address of token contract.
-        uint256 allocPoint;
-        uint256 lastRewardBlock;
-        uint256 accFaktPerShare;
-        uint256 pending;
-    }
- 
-    IFakt public fakt;
-    uint256 public faktPerBlock    = 18 * 1e17;
-
-    uint256 public pendingDuration  = 14 days;
-
-    mapping(uint256 => uint256) public capacityMax;
-
-    bool public canDeposit = true;
-    address public operator;
-
-    // the max capacity for one user's deposit.
-    mapping(uint256 => uint256) public userCapacityMax;
-
-    // Info of each pool.
-    PoolInfo[] public poolInfo;
-
-    // @notice A record of states for signing / validating signatures
-    mapping(address => uint256) public nonces;
-    // Info of each user that stakes LP tokens.
-    mapping (uint256 => mapping (address => UserInfo)) public userInfo;
-
-    // Total allocation poitns. Must be the sum of all allocation points in all pools.
-    uint256 public totalAllocPoint = 0;
-
-    uint256 public startBlock;
-
-
-     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256(
-            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-    );
-
-    /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant Capital_Unstake_TYPEHASH =
-        keccak256(
-            "CapitalUnstake(uint256 pid,address account,uint256 amount,uint256 nonce,uint256 deadline)"
-    );
-
-    bytes32 public constant Capital_Deposit_TYPEHASH =
-        keccak256(
-            "Deposit(uint256 pid,address account,uint256 amount,uint256 nonce,uint256 deadline)"
-    );
-
-
-
-    constructor(address _signer, address _fakt, uint256 _startBlock)  {
-        fakt       = IFakt(_fakt);
-        startBlock  = _startBlock;
-        userCapacityMax[0] = 10000e18;
-        signer = _signer;
-    }
-    
-    function setOperator(address _operator) external onlyOwner {   
-        require(_operator != address(0),"_operator is zero");
-        operator = _operator;
-        emit SetOperator(_operator);
+    // mint with max supply
+    function mint(address _to, uint256 _amount) external onlyMinter returns (bool) {
+        if(_amount.add(totalSupply()) > maxSupply) {
+            return false;
+        }
+        _mint(_to, _amount);
+        return true;
     }
 
-    function setSigner(address _signer) external onlyOwner {
-        require(_signer != address(0), "_signer is zero");
-        signer = _signer;
-        emit SetSigner(_signer);
+
+    function addMinter(address _minter) external onlyOwner returns (bool) {
+        require(_minter != address(0), "Medifakt: _addMinter is the zero address"); 
+        return EnumerableSet.add(_minters, _minter);
     }
 
-    modifier onlyOperator() {
-        require(msg.sender == operator,"not operator");
+    function delMinter(address _minter) external onlyOwner returns (bool) {
+         require(_minter != address(0), "Medifakt: _delMinter is the zero address");    
+        return EnumerableSet.remove(_minters, _minter);
+    }
+
+    function getMinterLength() external view returns (uint256) {
+        return EnumerableSet.length(_minters);
+    }
+
+    function isMinter(address account) public view returns (bool) {
+        return EnumerableSet.contains(_minters, account);
+    }
+
+    // modifier for mint function
+    modifier onlyMinter() {
+        require(isMinter(msg.sender), "Medifakt: caller is not the minter");
         _;
     }
-
-    function switchDeposit() external onlyOwner {
-        canDeposit = !canDeposit;
-        emit SwitchDeposit(canDeposit);
-    }
-
-    function setUserCapacityMax(uint256 _pid,uint256 _max) external onlyOwner {
-        userCapacityMax[_pid] = _max;
-        emit SetUserCapacityMax(_pid,_max);
-    }
-
-    function setCapacityMax(uint256 _pid,uint256 _max) external onlyOwner {
-        capacityMax[_pid] = _max;
-        emit SetCapacityMax(_pid,_max);
-    }
-   
-    function updateBlockReward(uint256 _newReward) external onlyOwner {
-        faktPerBlock   = _newReward;
-        emit UpdateBlockReward(_newReward);
-    }
-
-    function updatePendingDuration(uint256 _seconds) external onlyOwner {
-        pendingDuration = _seconds;
-        emit UpdatePendingDuration(_seconds);
-    }
-
-    function poolLength() public view returns (uint256) {
-        return poolInfo.length;
-    }
-
-    // Add a new lp to the pool. Can only be called by the owner.
-    function addLpToken(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate,uint256 maxCapacity) external onlyOwner  {
-        
-        require(address(_lpToken) != address(0),"_lpToken is zero");
-        for(uint256 i=0; i<poolLength(); i++) {
-            require(address(_lpToken) != address(poolInfo[i].lpToken), "Duplicate Token!");
-        }
-
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-
-        capacityMax[poolInfo.length] = maxCapacity;
-        uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
-        totalAllocPoint = totalAllocPoint.add(_allocPoint);
-
-        poolInfo.push(PoolInfo({
-            amount:0,
-            lpToken: _lpToken,
-            allocPoint: _allocPoint,
-            lastRewardBlock: lastRewardBlock,
-            accFaktPerShare: 0,
-            pending: 0
-        }));
-
-        emit Add(_allocPoint,_lpToken,_withUpdate);
-    }
-
-    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) external  onlyOwner  {
-        require(_pid < poolInfo.length , "invalid _pid");
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
-        poolInfo[_pid].allocPoint = _allocPoint;
-        emit Set(_pid,_allocPoint,_withUpdate);
-    }
-
-    function getMultiplier(uint256 _from, uint256 _to) internal pure returns (uint256) {
-        return _to.sub(_from);
-    }
-
-    function pendingFakt(uint256 _pid, address _user) external view returns (uint256) {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_user];
-
-        uint256 accFaktPerShare = pool.accFaktPerShare;
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (block.number > pool.lastRewardBlock && lpSupply != 0) {
-            uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 faktReward = multiplier.mul(faktPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accFaktPerShare = accFaktPerShare.add(faktReward.mul(1e12).div(lpSupply));
-        }
-
-        return user.amount.mul(accFaktPerShare).div(1e12).sub(user.rewardDebt);
-    }
-
-
-    function massUpdatePools() public {
-        uint256 length = poolInfo.length;
-        for (uint256 pid = 0; pid < length; ++pid) {
-            updatePool(pid);
-        }
-    }
-
-    function updatePool(uint256 _pid) public {
-        require(_pid < poolInfo.length, "invalid _pid");
-        PoolInfo storage pool = poolInfo[_pid];
-        if (block.number <= pool.lastRewardBlock) {
-            return;
-        }
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (lpSupply == 0) {
-            pool.lastRewardBlock = block.number;
-            return;
-        }
-
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 faktReward = multiplier.mul(faktPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-
-        bool mintRet = fakt.mint(address(this), faktReward);
-        if(mintRet) {
-            pool.accFaktPerShare = pool.accFaktPerShare.add(faktReward.mul(1e12).div(lpSupply));
-            pool.lastRewardBlock = block.number;
-        }
-    }
-
-
-    function deposit(uint256 _pid, uint256 _amount) external whenNotPaused {
-
-        require(canDeposit, "can not");
-        require(_pid < poolInfo.length, "invalid _pid");
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user limit");
-        require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
-        updatePool(_pid);
-
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-
-        uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
-        
-        user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accFaktPerShare).div(1e12);
-        
-        pool.amount = pool.amount.add(_amount);
-
-        if(pending > 0){
-            safeFaktTransfer(msg.sender,pending);
-        }
-        emit Deposit(msg.sender, _pid, _amount);
-    }
-
-    // unstake, need pending sometime
-    function unstake(
-            uint256 _pid,
-            uint256 _amount,
-            uint8 v,
-            bytes32 r,
-            bytes32 s,
-            uint256 deadline) external nonReentrant whenNotPaused {
-
-        bytes32 domainSeparator =
-            keccak256(
-                abi.encode(
-                    DOMAIN_TYPEHASH,
-                    keccak256(bytes(name)),
-                    keccak256(bytes(version)),
-                    getChainId(),
-                    address(this)
-                )
-            );
-        bytes32 structHash =
-            keccak256(
-                abi.encode(
-                    Capital_Unstake_TYPEHASH,
-                    _pid,
-                    address(msg.sender),
-                    _amount,
-                    nonces[msg.sender]++,
-                    deadline
-                )
-            );
-        bytes32 digest =
-            keccak256(
-                abi.encodePacked("\x19\x01", domainSeparator, structHash)
-            );
-            
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "invalid signature");
-        require(signatory == signer, "unauthorized");
-        
-
-        require(_pid < poolInfo.length , "invalid _pid");
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-
-        require(user.amount >= _amount, "unstake: insufficient assets");
-
-        updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
-       
-        user.amount     = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accFaktPerShare).div(1e12);
-
-        user.pendingAt  = block.timestamp;
-        user.pendingWithdrawal = user.pendingWithdrawal.add(_amount);
-
-        pool.pending = pool.pending.add(_amount);
-
-        safeFaktTransfer(msg.sender, pending);
-
-        emit Unstake(msg.sender,_pid,_amount,nonces[msg.sender]-1);
-    }
-
-
-      // unstake, need pending sometime
-      // won't use this function, for we don't use it now.
-    function deposit(
-            uint256 _pid,
-            uint256 _amount,
-            uint8 v,
-            bytes32 r,
-            bytes32 s,
-            uint256 deadline) external nonReentrant whenNotPaused {
-
-   
-        bytes32 domainSeparator =
-            keccak256(
-                abi.encode(
-                    DOMAIN_TYPEHASH,
-                    keccak256(bytes(name)),
-                    keccak256(bytes(version)),
-                    getChainId(),
-                    address(this)
-                )
-            );
-        bytes32 structHash =
-            keccak256(
-                abi.encode(
-                    Capital_Deposit_TYPEHASH,
-                    _pid,
-                    address(msg.sender),
-                    _amount,
-                    nonces[msg.sender]++,
-                    deadline
-                )
-            );
-        bytes32 digest =
-            keccak256(
-                abi.encodePacked("\x19\x01", domainSeparator, structHash)
-            );
-            
-        address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), "invalid signature");
-        require(signatory == signer, "unauthorized");
-        
-
-        require(_pid < poolInfo.length , "invalid _pid");
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount.add(_amount) <= userCapacityMax[_pid],"exceed user's limit");
-        require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
-        updatePool(_pid);
-
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-
-        uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
-        
-        user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accFaktPerShare).div(1e12);
-        
-        pool.amount = pool.amount.add(_amount);
-
-        if(pending > 0){
-            safeFaktTransfer(msg.sender,pending);
-        }
-        emit DepositSign(msg.sender, _pid, _amount,nonces[msg.sender] - 1);
-    }
-
-    function isPending(uint256 _pid) external view returns (bool,uint256) {
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        if(block.timestamp >= user.pendingAt.add(pendingDuration)) {
-            return (false,0);
-        }
-
-        return (true,user.pendingAt.add(pendingDuration).sub(block.timestamp));
-    }
-    
-    // when it's pending while a claim occurs, the value of the withdrawal will decrease as usual
-    // so we keep the claim function by this tool.
-    function withdraw(uint256 _pid) external nonReentrant whenNotPaused {
-        require(_pid < poolInfo.length , "invalid _pid");
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-
-        require(block.timestamp >= user.pendingAt.add(pendingDuration), "still pending");
-
-        uint256 amount          = user.pendingWithdrawal;
-        pool.amount             = pool.amount.sub(amount);
-        pool.pending            = pool.pending.sub(amount);
-
-        user.pendingWithdrawal  = 0;
-
-        pool.lpToken.safeTransfer(address(msg.sender), amount);
-
-        emit Withdraw(msg.sender, _pid, amount);
-    }
-
-    //claim reward
-    function claim(uint256 _pid) external nonReentrant whenNotPaused {
-        require(_pid < poolInfo.length , "invalid _pid");
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-
-        updatePool(_pid);
-
-        uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
-        safeFaktTransfer(msg.sender, pending);
-        user.rewardDebt = user.amount.mul(pool.accFaktPerShare).div(1e12);
-
-        emit Claim(msg.sender, _pid, pending);
-    }
-
-    function safeFaktTransfer(address _to, uint256 _amount) internal {
-        require(_to != address(0),"_to is zero");
-        uint256 faktBal = fakt.balanceOf(address(this));
-        if (_amount > faktBal) {
-            fakt.transfer(_to,faktBal);
-        } else {
-            fakt.transfer(_to,_amount);
-        }
-    }
-    
-    function getChainId() internal view returns (uint256) {
-        uint256 chainId;
-        assembly {
-            chainId := chainid()
-        }
-        return chainId;
-    }
-    
-    ////////////  event definitions  ////////////
-    event Claim(address indexed user,uint256 pid,uint256 amount);
-    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
-    event DepositSign(address indexed user, uint256 indexed pid, uint256 amount, uint256 nonce);
-    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event Unstake(address indexed user,uint256 pid, uint256 amount,uint256 nonce);
-    event UpdateBlockReward(uint256 reward);
-    event UpdatePendingDuration(uint256 duration);
-    event Add(uint256 point, IERC20 token, bool update);
-    event Set(uint256 pid, uint256 point, bool update);
-    event SwitchDeposit(bool swi);
-    event SetUserCapacityMax(uint256 pid,uint256 max);
-    event SetCapacityMax(uint256 pid, uint256 max);
-    event SetOperator(address indexed operator);
-    event SetSigner(address indexed signer);
 }

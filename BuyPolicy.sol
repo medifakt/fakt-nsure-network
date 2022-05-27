@@ -795,7 +795,6 @@ contract Purchase is Ownable, ReentrancyGuard {
     uint256 public treasuryRate = 10;
     mapping(uint256 => Order) public insuranceOrders;
 
-
     struct Order {
         address payable buyer;
         uint256 productId;
@@ -814,7 +813,6 @@ contract Purchase is Ownable, ReentrancyGuard {
     }
 
     address[]  public  divCurrencies;
-
 
     constructor(address _signer,address _underWriting,address _surplus,address _product,address _weth,address _treasury)  {
         underWriting = _underWriting;
@@ -964,11 +962,8 @@ contract Purchase is Ownable, ReentrancyGuard {
         require(signatory != address(0), "invalid signature");
         require(signatory == signer, "unauthorized");
         
-
-
         Order storage _order = insuranceOrders[orderIndex];
-        
-
+    
         _order.buyer    = payable(msg.sender);
         _order.currency = currency;
         _order.productId= _productId;

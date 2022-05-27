@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
+
 pragma solidity ^0.8.0;
+
+
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -79,6 +82,27 @@ interface IERC20 {
     ) external returns (bool);
 }
 
+/**
+ * @dev Interface for the optional metadata functions from the ERC20 standard.
+ *
+ * _Available since v4.1._
+ */
+interface IERC20Metadata is IERC20 {
+    /**
+     * @dev Returns the name of the token.
+     */
+    function name() external view returns (string memory);
+
+    /**
+     * @dev Returns the symbol of the token.
+     */
+    function symbol() external view returns (string memory);
+
+    /**
+     * @dev Returns the decimals places of the token.
+     */
+    function decimals() external view returns (uint8);
+}
 
 /**
  * @dev Wrappers over Solidity's arithmetic operations.
@@ -609,7 +633,6 @@ library SafeERC20 {
     }
 }
 
-
 /**
  * @dev Provides information about the current execution context, including the
  * sender of the transaction and its data. While these are generally available
@@ -627,6 +650,178 @@ abstract contract Context {
 
     function _msgData() internal view virtual returns (bytes calldata) {
         return msg.data;
+    }
+}
+
+
+/**
+ * @dev Implementation of the {IERC20} interface.
+ *
+ * This implementation is agnostic to the way tokens are created. This means
+ * that a supply mechanism has to be added in a derived contract using {_mint}.
+ * For a generic mechanism see {ERC20PresetMinterPauser}.
+ *
+ * TIP: For a detailed writeup see our guide
+ * https://forum.zeppelin.solutions/t/how-to-implement-erc20-supply-mechanisms/226[How
+ * to implement supply mechanisms].
+ *
+ * We have followed general OpenZeppelin Contracts guidelines: functions revert
+ * instead returning `false` on failure. This behavior is nonetheless
+ * conventional and does not conflict with the expectations of ERC20
+ * applications.
+ *
+ * Additionally, an {Approval} event is emitted on calls to {transferFrom}.
+ * This allows applications to reconstruct the allowance for all accounts just
+ * by listening to said events. Other implementations of the EIP may not emit
+ * these events, as it isn't required by the specification.
+ *
+ * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
+ * functions have been added to mitigate the well-known issues around setting
+ * allowances. See {IERC20-approve}.
+ */
+
+/**
+ * @dev Contract module which allows children to implement an emergency stop
+ * mechanism that can be triggered by an authorized account.
+ *
+ * This module is used through inheritance. It will make available the
+ * modifiers `whenNotPaused` and `whenPaused`, which can be applied to
+ * the functions of your contract. Note that they will not be pausable by
+ * simply including this module, only once the modifiers are put in place.
+ */
+abstract contract Pausable is Context {
+    /**
+     * @dev Emitted when the pause is triggered by `account`.
+     */
+    event Paused(address account);
+
+    /**
+     * @dev Emitted when the pause is lifted by `account`.
+     */
+    event Unpaused(address account);
+
+    bool private _paused;
+
+    /**
+     * @dev Initializes the contract in unpaused state.
+     */
+    constructor() {
+        _paused = false;
+    }
+
+    /**
+     * @dev Returns true if the contract is paused, and false otherwise.
+     */
+    function paused() public view virtual returns (bool) {
+        return _paused;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is not paused.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     */
+    modifier whenNotPaused() {
+        require(!paused(), "Pausable: paused");
+        _;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The contract must be paused.
+     */
+    modifier whenPaused() {
+        require(paused(), "Pausable: not paused");
+        _;
+    }
+
+    /**
+     * @dev Triggers stopped state.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     */
+    function _pause() internal virtual whenNotPaused {
+        _paused = true;
+        emit Paused(_msgSender());
+    }
+
+    /**
+     * @dev Returns to normal state.
+     *
+     * Requirements:
+     *
+     * - The contract must be paused.
+     */
+    function _unpause() internal virtual whenPaused {
+        _paused = false;
+        emit Unpaused(_msgSender());
+    }
+}
+
+
+/**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ * available, which can be applied to functions to make sure there are no nested
+ * (reentrant) calls to them.
+ *
+ * Note that because there is a single `nonReentrant` guard, functions marked as
+ * `nonReentrant` may not call one another. This can be worked around by making
+ * those functions `private`, and then adding `external` `nonReentrant` entry
+ * points to them.
+ *
+ * TIP: If you would like to learn more about reentrancy and alternative ways
+ * to protect against it, check out our blog post
+ * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
+ */
+abstract contract ReentrancyGuard {
+    // Booleans are more expensive than uint256 or any type that takes up a full
+    // word because each write operation emits an extra SLOAD to first read the
+    // slot's contents, replace the bits taken up by the boolean, and then write
+    // back. This is the compiler's defense against contract upgrades and
+    // pointer aliasing, and it cannot be disabled.
+
+    // The values being non-zero value makes deployment a bit more expensive,
+    // but in exchange the refund on every call to nonReentrant will be lower in
+    // amount. Since refunds are capped to a percentage of the total
+    // transaction's gas, it is best to keep them low in cases like this one, to
+    // increase the likelihood of the full refund coming into effect.
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and making it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+
+        _;
+
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
     }
 }
 
@@ -688,295 +883,469 @@ abstract contract Ownable is Context {
     }
 }
 
-/**
- * @dev Contract module that helps prevent reentrant calls to a function.
- *
- * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
- * available, which can be applied to functions to make sure there are no nested
- * (reentrant) calls to them.
- *
- * Note that because there is a single `nonReentrant` guard, functions marked as
- * `nonReentrant` may not call one another. This can be worked around by making
- * those functions `private`, and then adding `external` `nonReentrant` entry
- * points to them.
- *
- * TIP: If you would like to learn more about reentrancy and alternative ways
- * to protect against it, check out our blog post
- * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
- */
-abstract contract ReentrancyGuard {
-    // Booleans are more expensive than uint256 or any type that takes up a full
-    // word because each write operation emits an extra SLOAD to first read the
-    // slot's contents, replace the bits taken up by the boolean, and then write
-    // back. This is the compiler's defense against contract upgrades and
-    // pointer aliasing, and it cannot be disabled.
+contract ERC20 is Context, IERC20, IERC20Metadata {
+    mapping(address => uint256) private _balances;
 
-    // The values being non-zero value makes deployment a bit more expensive,
-    // but in exchange the refund on every call to nonReentrant will be lower in
-    // amount. Since refunds are capped to a percentage of the total
-    // transaction's gas, it is best to keep them low in cases like this one, to
-    // increase the likelihood of the full refund coming into effect.
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
+    mapping(address => mapping(address => uint256)) private _allowances;
 
-    uint256 private _status;
+    uint256 private _totalSupply;
 
-    constructor() {
-        _status = _NOT_ENTERED;
+    string private _name;
+    string private _symbol;
+
+    /**
+     * @dev Sets the values for {name} and {symbol}.
+     *
+     * The default value of {decimals} is 18. To select a different value for
+     * {decimals} you should overload it.
+     *
+     * All two of these values are immutable: they can only be set once during
+     * construction.
+     */
+    constructor(string memory name_, string memory symbol_) {
+        _name = name_;
+        _symbol = symbol_;
     }
 
     /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     * Calling a `nonReentrant` function from another `nonReentrant`
-     * function is not supported. It is possible to prevent this from happening
-     * by making the `nonReentrant` function external, and making it call a
-     * `private` function that does the actual work.
+     * @dev Returns the name of the token.
      */
-    modifier nonReentrant() {
-        // On the first call to nonReentrant, _notEntered will be true
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
-
-        // Any calls to nonReentrant after this point will fail
-        _status = _ENTERED;
-
-        _;
-
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
-        _status = _NOT_ENTERED;
-    }
-}
-
-interface IFakt {
-
-    function burn(uint256 amount)  external ;
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount) external  returns (bool);
-    function mint(address _to, uint256 _amount) external  returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-}
-
-
-
-/**
- * @dev     a contract for locking fakt Token to be an underwriter.
- *   
- * @notice  the underwriter program would be calculated and recorded by central ways
-            which is too complicated for contracts(gas used etc.)
- */
-
-
-contract Treasury is Ownable, ReentrancyGuard{
-    
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
-    
-
-    address public constant ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-
-
-    address public signer; 
-    string constant public name = "Treasury";
-    string public constant version = "1";
-    
-    uint256 public depositMax = 1 * 1e6 * 1e18;
-    uint256 public deadlineDuration = 30 minutes;
-    
-    address public operator;
-    
-    /// @notice A record of states for signing / validating signatures
-    mapping (address => uint256) public nonces;
-    
-    struct DivCurrency {
-        address divCurrency;
-        uint256 limit;
-    }
-    
-    DivCurrency[] public divCurrencies;
-    
-
-    IFakt public Fakt;
-    uint256 private _totalSupply;
-    uint256 public claimDuration = 30 minutes;
-
-    mapping(address => uint256) private _balances;
-    mapping(address => uint256) public claimAt;
-
-   
-
-    modifier onlyOperator() {
-        require(msg.sender == operator,"not operator");
-        _;
+    function name() public view virtual override returns (string memory) {
+        return _name;
     }
 
-      /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-
- 
-    /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant CLAIM_TYPEHASH = keccak256("Claim(address account,uint256 currency,uint256 amount,uint256 nonce,uint256 deadline)");
-
-
-    /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant WITHDRAW_TYPEHASH = keccak256("Withdraw(address account,uint256 amount,uint256 nonce,uint256 deadline)");
-
-    constructor(address _signer, address _fakt) {
-        Fakt = IFakt(_fakt);
-        signer = _signer;
+    /**
+     * @dev Returns the symbol of the token, usually a shorter version of the
+     * name.
+     */
+    function symbol() public view virtual override returns (string memory) {
+        return _symbol;
     }
 
-    receive() external payable {}
-  
-    function totalSupply() external view returns (uint256) {
+    /**
+     * @dev Returns the number of decimals used to get its user representation.
+     * For example, if `decimals` equals `2`, a balance of `505` tokens should
+     * be displayed to a user as `5.05` (`505 / 10 ** 2`).
+     *
+     * Tokens usually opt for a value of 18, imitating the relationship between
+     * Ether and Wei. This is the value {ERC20} uses, unless this function is
+     * overridden;
+     *
+     * NOTE: This information is only used for _display_ purposes: it in
+     * no way affects any of the arithmetic of the contract, including
+     * {IERC20-balanceOf} and {IERC20-transfer}.
+     */
+    function decimals() public view virtual override returns (uint8) {
+        return 18;
+    }
+
+    /**
+     * @dev See {IERC20-totalSupply}.
+     */
+    function totalSupply() public view virtual override returns (uint256) {
         return _totalSupply;
     }
 
-    function balanceOf(address account) external view returns (uint256) {
+    /**
+     * @dev See {IERC20-balanceOf}.
+     */
+    function balanceOf(address account) public view virtual override returns (uint256) {
         return _balances[account];
     }
 
+    /**
+     * @dev See {IERC20-transfer}.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - the caller must have a balance of at least `amount`.
+     */
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+        address owner = _msgSender();
+        _transfer(owner, to, amount);
+        return true;
+    }
 
-  // payout for claiming
-    function payouts(address payable _to, uint256 _amount, address token) external onlyOperator {
-         require(_to != address(0),"_to is zero");
+    /**
+     * @dev See {IERC20-allowance}.
+     */
+    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+        return _allowances[owner][spender];
+    }
+
+    /**
+     * @dev See {IERC20-approve}.
+     *
+     * NOTE: If `amount` is the maximum `uint256`, the allowance is not updated on
+     * `transferFrom`. This is semantically equivalent to an infinite approval.
+     *
+     * Requirements:
+     *
+     * - `spender` cannot be the zero address.
+     */
+    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+        address owner = _msgSender();
+        _approve(owner, spender, amount);
+        return true;
+    }
+
+    /**
+     * @dev See {IERC20-transferFrom}.
+     *
+     * Emits an {Approval} event indicating the updated allowance. This is not
+     * required by the EIP. See the note at the beginning of {ERC20}.
+     *
+     * NOTE: Does not update the allowance if the current allowance
+     * is the maximum `uint256`.
+     *
+     * Requirements:
+     *
+     * - `from` and `to` cannot be the zero address.
+     * - `from` must have a balance of at least `amount`.
+     * - the caller must have allowance for ``from``'s tokens of at least
+     * `amount`.
+     */
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual override returns (bool) {
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+        _transfer(from, to, amount);
+        return true;
+    }
+
+    /**
+     * @dev Atomically increases the allowance granted to `spender` by the caller.
+     *
+     * This is an alternative to {approve} that can be used as a mitigation for
+     * problems described in {IERC20-approve}.
+     *
+     * Emits an {Approval} event indicating the updated allowance.
+     *
+     * Requirements:
+     *
+     * - `spender` cannot be the zero address.
+     */
+    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+        address owner = _msgSender();
+        _approve(owner, spender, allowance(owner, spender) + addedValue);
+        return true;
+    }
+
+    /**
+     * @dev Atomically decreases the allowance granted to `spender` by the caller.
+     *
+     * This is an alternative to {approve} that can be used as a mitigation for
+     * problems described in {IERC20-approve}.
+     *
+     * Emits an {Approval} event indicating the updated allowance.
+     *
+     * Requirements:
+     *
+     * - `spender` cannot be the zero address.
+     * - `spender` must have allowance for the caller of at least
+     * `subtractedValue`.
+     */
+    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+        address owner = _msgSender();
+        uint256 currentAllowance = allowance(owner, spender);
+        require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
+        unchecked {
+            _approve(owner, spender, currentAllowance - subtractedValue);
+        }
+
+        return true;
+    }
+
+    /**
+     * @dev Moves `amount` of tokens from `from` to `to`.
+     *
+     * This internal function is equivalent to {transfer}, and can be used to
+     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     *
+     * Emits a {Transfer} event.
+     *
+     * Requirements:
+     *
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+     * - `from` must have a balance of at least `amount`.
+     */
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {
+        require(from != address(0), "ERC20: transfer from the zero address");
+        require(to != address(0), "ERC20: transfer to the zero address");
+
+        _beforeTokenTransfer(from, to, amount);
+
+        uint256 fromBalance = _balances[from];
+        require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
+        unchecked {
+            _balances[from] = fromBalance - amount;
+        }
+        _balances[to] += amount;
+
+        emit Transfer(from, to, amount);
+
+        _afterTokenTransfer(from, to, amount);
+    }
+
+    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
+     * the total supply.
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     */
+    function _mint(address account, uint256 amount) internal virtual {
+        require(account != address(0), "ERC20: mint to the zero address");
+
+        _beforeTokenTransfer(address(0), account, amount);
+
+        _totalSupply += amount;
+        _balances[account] += amount;
+        emit Transfer(address(0), account, amount);
+
+        _afterTokenTransfer(address(0), account, amount);
+    }
+
+    /**
+     * @dev Destroys `amount` tokens from `account`, reducing the
+     * total supply.
+     *
+     * Emits a {Transfer} event with `to` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     * - `account` must have at least `amount` tokens.
+     */
+    function _burn(address account, uint256 amount) internal virtual {
+        require(account != address(0), "ERC20: burn from the zero address");
+
+        _beforeTokenTransfer(account, address(0), amount);
+
+        uint256 accountBalance = _balances[account];
+        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
+        unchecked {
+            _balances[account] = accountBalance - amount;
+        }
+        _totalSupply -= amount;
+
+        emit Transfer(account, address(0), amount);
+
+        _afterTokenTransfer(account, address(0), amount);
+    }
+
+    /**
+     * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
+     *
+     * This internal function is equivalent to `approve`, and can be used to
+     * e.g. set automatic allowances for certain subsystems, etc.
+     *
+     * Emits an {Approval} event.
+     *
+     * Requirements:
+     *
+     * - `owner` cannot be the zero address.
+     * - `spender` cannot be the zero address.
+     */
+    function _approve(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal virtual {
+        require(owner != address(0), "ERC20: approve from the zero address");
+        require(spender != address(0), "ERC20: approve to the zero address");
+
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }
+
+    /**
+     * @dev Updates `owner` s allowance for `spender` based on spent `amount`.
+     *
+     * Does not update the allowance amount in case of infinite allowance.
+     * Revert if not enough allowance is available.
+     *
+     * Might emit an {Approval} event.
+     */
+    function _spendAllowance(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal virtual {
+        uint256 currentAllowance = allowance(owner, spender);
+        if (currentAllowance != type(uint256).max) {
+            require(currentAllowance >= amount, "ERC20: insufficient allowance");
+            unchecked {
+                _approve(owner, spender, currentAllowance - amount);
+            }
+        }
+    }
+
+    /**
+     * @dev Hook that is called before any transfer of tokens. This includes
+     * minting and burning.
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+     * will be transferred to `to`.
+     * - when `from` is zero, `amount` tokens will be minted for `to`.
+     * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
+     * - `from` and `to` are never both zero.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {}
+
+    /**
+     * @dev Hook that is called after any transfer of tokens. This includes
+     * minting and burning.
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+     * has been transferred to `to`.
+     * - when `from` is zero, `amount` tokens have been minted for `to`.
+     * - when `to` is zero, `amount` of ``from``'s tokens have been burned.
+     * - `from` and `to` are never both zero.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     */
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {}
+}
+
+
+
+contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
+
+    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
+
+    address public constant ETHEREUM = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+
+    uint256 public maxConvert = 10000e18;
+    address public token;
+    uint256 public tokenDecimal;
+    address public operator;
+
+    mapping (address => uint256) public depositAt; // in case of flashloan attacks
+
+    constructor(address _token, uint256 _tokenDecimal,string memory name,string memory symbol)  ERC20(name,symbol)
+    {
+        token = _token;
+        tokenDecimal = _tokenDecimal;
+    }
+
+    function smartBalance() public view returns (uint256) {
+        if (token == ETHEREUM) {
+           return address(this).balance;
+        }
+        return IERC20(token).balanceOf(address(this));
+    } 
+
+    function calculateMintAmount(uint256 _depositAmount) internal view returns (uint256) {
+        if (totalSupply() == 0) {
+            uint256 value = _depositAmount.mul(uint256(1e18)).div(10**tokenDecimal);
+            return value;
+        }
+        uint256 initialBalance = smartBalance().sub(_depositAmount);
+        return _depositAmount.mul(totalSupply()).div(initialBalance);
+    }
+    
+    // convert ETH or USDx to nETH/nUSDx
+    function convert(uint256 _amount) external payable nonReentrant whenNotPaused {
+        require(_amount > 0, "CapitalConverter: Cannot stake 0.");
+        require(_amount <= maxConvert, "exceeding the maximum limit");
+
+        depositAt[msg.sender] = block.number;
+
+        if (token != ETHEREUM) {
+            require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
+            IERC20(token).safeTransferFrom(_msgSender(), address(this), _amount);
+        } else {
+            require(_amount == msg.value, "CapitalConverter: Incorrect eth amount.");
+        }
+
+        uint256 value = calculateMintAmount(_amount);
+        _mint(_msgSender(), value);
+        
+        // emit event
+        emit Mint(_msgSender(), _amount, value);
+    }
+
+    // withdraw the ETH or USDx
+    function exit(uint256 _value) external nonReentrant whenNotPaused {
+        require(balanceOf(_msgSender()) >= _value && _value > 0, 
+                "CapitalConverter: insufficient assets");
+        require(depositAt[msg.sender] > 0, "No deposit history");
+        require(depositAt[msg.sender] < block.number, "Reject flashloan");
+
+        uint256 value = _value.mul(smartBalance()).div(totalSupply());
+        if (token != ETHEREUM) {
+            IERC20(token).safeTransfer(_msgSender(), value);
+        } else {
+            payable(msg.sender).transfer(value);
+        }
+
+        _burn(_msgSender(), _value);
+        
+        // emit event
+        emit Burn(_msgSender(), _value, value);
+    }
+
+    function payouts(address payable _to, uint256 _amount) external onlyOperator {
+        require(_to != address(0),"_to is zero");
         if (token != ETHEREUM) {
             IERC20(token).safeTransfer(_to, _amount);
         } else {
             _to.transfer(_amount);
         }
-
         emit Payouts(_to, _amount);
     }
 
-
-    // return my token balance
-    function myBalanceOf(address tokenAddress) external view returns(uint256) {
-        return IERC20(tokenAddress).balanceOf(address(this));
-    }
-    
-    function setClaimDuration(uint256 _duration)external onlyOwner {
-        require(claimDuration != _duration, "the same duration");
-        claimDuration = _duration;
-        emit SetClaimDuration(_duration);
+    modifier onlyOperator() {
+        require(msg.sender == operator, "not operator");
+        _;
     }
 
-    function setSigner(address _signer) external onlyOwner {
-        require(_signer != address(0),"_signer is zero");
-        signer = _signer;
-        emit SetSigner(_signer);
-    }
- 
-    function setOperator(address _operator) external onlyOwner {  
-        require(_operator != address(0),"_operator is zero"); 
+    function setOperator(address _operator) external onlyOwner {
+        require(_operator != address(0),"_operator is zero");
         operator = _operator;
         emit SetOperator(_operator);
     }
 
-    function setDeadlineDuration(uint256 _duration) external onlyOwner {
-        deadlineDuration = _duration;
-        emit SetDeadlineDuration(_duration);
-    }
- 
-    function getDivCurrencyLength() external view returns (uint256) {
-        return divCurrencies.length;
+    function setMaxConvert(uint256 _max) external onlyOwner {
+        maxConvert = _max;
+        emit SetMaxConvert(_max);
     }
 
-    function addDivCurrency(address _currency,uint256 _limit) external onlyOwner {
-        require(_currency != address(0),"_currency is zero");
-        divCurrencies.push(DivCurrency({divCurrency:_currency, limit:_limit}));
+    receive() external payable {
+        revert();
     }
 
-    function setDepositMax(uint256 _max) external onlyOwner {
-        depositMax = _max;
-        emit SetDepositMax(_max);
-    }
-
-    function deposit(uint256 amount) external nonReentrant{
-        require(amount > 0, "Cannot stake 0");
-        require(amount <= depositMax,"exceeding the maximum limit");
-
-        _totalSupply = _totalSupply.add(amount);
-        _balances[msg.sender] = _balances[msg.sender].add(amount);
-
-        Fakt.transferFrom(msg.sender,address(this),amount);
-        emit Deposit(msg.sender, amount);
-    }
-
-    function withdraw(uint256 _amount,uint256 deadline,uint8 v, bytes32 r, bytes32 s) 
-        external nonReentrant
-    {
-        require(_balances[msg.sender] >= _amount,"insufficient");
-
-        bytes32 domainSeparator =   keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),
-                                        keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash  = keccak256(abi.encode(WITHDRAW_TYPEHASH, address(msg.sender), 
-                                _amount,nonces[msg.sender]++, deadline));
-        bytes32 digest      = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-
-        address signatory = ecrecover(digest, v, r, s);
-
-        require(signatory != address(0), "invalid signature");
-        require(signatory == signer, "unauthorized");
-        require(block.timestamp <= deadline, "signature expired");
-
-        _balances[msg.sender] = _balances[msg.sender].sub(_amount);
-        Fakt.transfer(msg.sender,_amount);
-        emit Withdraw(msg.sender,_amount,nonces[msg.sender]-1);
-    }
-
-    // burn 1/2 for claiming 
-    function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts) 
-        external onlyOperator 
-    {
-        require(_burnUsers.length == _amounts.length, "not equal");
-
-        for(uint256 i = 0; i<_burnUsers.length; i++) {
-            require(_balances[_burnUsers[i]] >= _amounts[i], "insufficient");
-
-            _balances[_burnUsers[i]] = _balances[_burnUsers[i]].sub(_amounts[i]);
-            Fakt.burn(_amounts[i]);
-
-            emit Burn(_burnUsers[i],_amounts[i]);
-        }
-    }
-
-    function claim(uint256 _amount, uint256 currency, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external nonReentrant
-    {
-        require(block.timestamp > claimAt[msg.sender].add(claimDuration), "wait" );
-        require(block.timestamp.add(deadlineDuration) > deadline, "expired");
-        require(_amount <= divCurrencies[currency].limit, "exceeding the maximum limit");
-        require(block.timestamp <= deadline, "signature expired");
-
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)),keccak256(bytes(version)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(CLAIM_TYPEHASH,address(msg.sender), currency, _amount,nonces[msg.sender]++, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        address signatory = ecrecover(digest, v, r, s);
-
-        require(signatory != address(0), "invalid signature");
-        require(signatory == signer, "unauthorized");
-        
-
-        claimAt[msg.sender] = block.timestamp;
-        IERC20(divCurrencies[currency].divCurrency).safeTransfer(msg.sender,_amount);
-
-        emit Claim(msg.sender,currency,_amount,nonces[msg.sender] -1);
-    }
-
-    function getChainId() internal view returns (uint256) {
-        uint256 chainId;
-        assembly { chainId := chainid() }
-        return chainId;
-    }
-
-    event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user,  uint256 amount,uint256 nonce);
-    event Claim(address indexed user,uint256 currency,uint256 amount,uint256 nonce);
-    event Burn(address indexed user,uint256 amount);
-    event SetOperator(address indexed operator);
-    event SetClaimDuration(uint256 duration);
-    event SetSigner(address indexed signer);
-    event SetDeadlineDuration(uint256 deadlineDuration);
-    event SetDepositMax(uint256 depositMax);
+    event Mint(address indexed sender, uint256 input, uint256 amount);
+    event Burn(address indexed sender, uint256 amount, uint256 output);
     event Payouts(address indexed to, uint256 amount);
+    event SetOperator(address indexed operator);
+    event SetMaxConvert(uint256 max);
+
 }
