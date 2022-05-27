@@ -1,6 +1,7 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: Unlicensed
 
-pragma solidity ^0.8.0;
+
+pragma solidity ^0.8.4;
 
 
 
@@ -884,6 +885,7 @@ abstract contract Ownable is Context {
 }
 
 contract ERC20 is Context, IERC20, IERC20Metadata {
+
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -1280,36 +1282,36 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
 
         if (token != ETHEREUM) {
             require(msg.value == 0, "CapitalConverter: Should not allow ETH deposits.");
-            IERC20(token).safeTransferFrom(_msgSender(), address(this), _amount);
+            IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
         } else {
             require(_amount == msg.value, "CapitalConverter: Incorrect eth amount.");
         }
 
         uint256 value = calculateMintAmount(_amount);
-        _mint(_msgSender(), value);
+        _mint(msg.sender, value);
         
         // emit event
-        emit Mint(_msgSender(), _amount, value);
+        emit Mint(msg.sender, _amount, value);
     }
 
     // withdraw the ETH or USDx
     function exit(uint256 _value) external nonReentrant whenNotPaused {
-        require(balanceOf(_msgSender()) >= _value && _value > 0, 
+        require(balanceOf(msg.sender) >= _value && _value > 0, 
                 "CapitalConverter: insufficient assets");
         require(depositAt[msg.sender] > 0, "No deposit history");
         require(depositAt[msg.sender] < block.number, "Reject flashloan");
 
         uint256 value = _value.mul(smartBalance()).div(totalSupply());
         if (token != ETHEREUM) {
-            IERC20(token).safeTransfer(_msgSender(), value);
+            IERC20(token).safeTransfer(msg.sender, value);
         } else {
             payable(msg.sender).transfer(value);
         }
 
-        _burn(_msgSender(), _value);
+        _burn(msg.sender, _value);
         
         // emit event
-        emit Burn(_msgSender(), _value, value);
+        emit Burn(msg.sender, _value, value);
     }
 
     function payouts(address payable _to, uint256 _amount) external onlyOperator {
@@ -1339,7 +1341,6 @@ contract CapitalConverter is ERC20, Ownable, Pausable, ReentrancyGuard {
     }
 
     receive() external payable {
-        revert();
     }
 
     event Mint(address indexed sender, uint256 input, uint256 amount);
