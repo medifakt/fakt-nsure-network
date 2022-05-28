@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -1469,7 +1469,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
         updatePool(_pid);
 
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        pool.lpToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
         
@@ -1508,7 +1508,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
                 abi.encode(
                     Capital_Unstake_TYPEHASH,
                     _pid,
-                    address(msg.sender),
+                    msg.sender,
                     _amount,
                     nonces[msg.sender]++,
                     deadline
@@ -1573,7 +1573,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
                 abi.encode(
                     Capital_Deposit_TYPEHASH,
                     _pid,
-                    address(msg.sender),
+                    msg.sender,
                     _amount,
                     nonces[msg.sender]++,
                     deadline
@@ -1596,7 +1596,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
         require(pool.amount.add(_amount) <= capacityMax[_pid],"exceed the total limit");
         updatePool(_pid);
 
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        pool.lpToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 pending = user.amount.mul(pool.accFaktPerShare).div(1e12).sub(user.rewardDebt);
         
@@ -1635,7 +1635,7 @@ contract CapitalStake is Ownable, Pausable, ReentrancyGuard {
 
         user.pendingWithdrawal  = 0;
 
-        pool.lpToken.safeTransfer(address(msg.sender), amount);
+        pool.lpToken.safeTransfer(msg.sender, amount);
 
         emit Withdraw(msg.sender, _pid, amount);
     }
