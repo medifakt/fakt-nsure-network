@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.2;
+pragma solidity ^0.8.4;
 
 /**
  * @dev Library for managing
@@ -1359,7 +1359,7 @@ contract Fakt is Ownable, ERC20 {
 
     uint256 private constant preMineSupply = 45 * 1e6 * 1e18;      // pre-mine
     uint256 private constant maxSupply = 100 * 1e6 * 1e18;     // the total supply
-    address private constant medifaktAdmin = 0x5Ba189D1A3E74cf3d1D38ad81F3d75cbFdbdb5bf;
+    address private constant medifaktAdmin = 0x9CC284FdfA70C713B56E4E1805FEA0bd6e8680d1;
 
     // for minters
     using EnumerableSet for EnumerableSet.AddressSet;
