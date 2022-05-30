@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -721,9 +721,6 @@ contract Surplus is Ownable {
         emit Payouts(_to, _amount);
     }
 
-    receive() external payable {}
-    
-
     function setOperator(address _operator) external onlyOwner {   
         require(_operator != address(0),"_operator is zero");
         operator = _operator;
@@ -735,6 +732,9 @@ contract Surplus is Ownable {
         _;
     }
 
+    
+    receive() external payable {}
+    
     /////////// events /////////////
     event Payouts(address indexed to, uint256 amount);
     event SetOperator(address indexed operator);
