@@ -767,7 +767,7 @@ interface IProduct {
 
 
 interface IUnderwriting {
-    function updateState(uint256 _pid, uint256 amount) external ;
+    function updateRewardPerFakt(uint256 _pid, uint256 amount) external ;
 }
 
 contract Purchase is Ownable, ReentrancyGuard {
@@ -866,7 +866,7 @@ contract Purchase is Ownable, ReentrancyGuard {
     function buyInsurance(
             uint256 _productId,
             uint256 _amount,
-            uint256 _cost,
+            uint256 _premium,
             uint256 period,
             uint256 currency
         ) external payable nonReentrant
@@ -875,26 +875,23 @@ contract Purchase is Ownable, ReentrancyGuard {
         require(divCurrencies[currency] != address(0) && currency < divCurrencies.length, "this asset type is not supported");
    
         if(divCurrencies[currency] == ETHEREUM) {
-            require(msg.value == _cost,"not equal");
+            require(msg.value == _premium,"not equal");
 
-            payable(underWriting).transfer(_cost.mul(underWritingRate).div(100));
-            payable(surplus).transfer(_cost.mul(surplusRate).div(100));
-            payable(treasury).transfer(_cost.mul(treasuryRate).div(100));
+            payable(underWriting).transfer(_premium.mul(underWritingRate).div(100));
+            payable(surplus).transfer(_premium.mul(surplusRate).div(100));
+            payable(treasury).transfer(_premium.mul(treasuryRate).div(100));
             
         } else {
-            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this), _cost);
 
-                // for underwriter with a value of 50%
-            IERC20(divCurrencies[currency]).safeTransfer(address(underWriting), _cost.mul(underWritingRate).div(100));
-            // for surplus with a value of 40% which is for insurance claim.
-            IERC20(divCurrencies[currency]).safeTransfer(address(surplus), _cost.mul(surplusRate).div(100));
-            // for treasury with a value of 10% which is for auditros etc.
-            IERC20(divCurrencies[currency]).safeTransfer(address(treasury), _cost.mul(treasuryRate).div(100));
+            IERC20(divCurrencies[currency]).safeTransferFrom(msg.sender,address(this), _premium);
+            IERC20(divCurrencies[currency]).safeTransfer(address(underWriting), _premium.mul(underWritingRate).div(100));
+            IERC20(divCurrencies[currency]).safeTransfer(address(surplus), _premium.mul(surplusRate).div(100));
+            IERC20(divCurrencies[currency]).safeTransfer(address(treasury), _premium.mul(treasuryRate).div(100));
         }
         
         
 
-        IUnderwriting(underWriting).updateState(_productId,  _cost.mul(underWritingRate).div(100));
+        IUnderwriting(underWriting).updateRewardPerFakt(_productId,  _premium.mul(underWritingRate).div(100));
 
         userOrders[msg.sender].push(orderIndex);
         
@@ -903,7 +900,7 @@ contract Purchase is Ownable, ReentrancyGuard {
         _order.buyer    = payable(msg.sender);
         _order.currency = currency;
         _order.productId= _productId;
-        _order.premium  = _cost;
+        _order.premium  = _premium;
         _order.amount   = _amount;
         _order.createAt = block.timestamp;
         _order.period   = period;
@@ -924,6 +921,14 @@ contract Purchase is Ownable, ReentrancyGuard {
         }
         return _orders;
     }
+
+    function getUserOrderIndex(address _user) external view returns(uint256[] memory) {
+        require( _user != address(0) ,"invalid user");
+
+        uint256[] memory indexes = userOrders[msg.sender];
+        return indexes;
+    }
+
 
     event NewOrder(Order);
     event SetUnderWriting(address indexed underWriting);

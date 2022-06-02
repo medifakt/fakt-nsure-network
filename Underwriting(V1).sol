@@ -821,7 +821,7 @@ contract Underwriting is Ownable, ReentrancyGuard{
         emit SetDepositMax(_max);
     }
 
-    function deposit(uint256 _amount, uint256 _protocolId) external nonReentrant {
+    function deposit(uint256 _amount, uint256 _pId) external nonReentrant {
 
         require(_amount > 0, "Cannot stake 0");
         require(_amount <= depositMax,"exceeding the maximum limit");
@@ -835,50 +835,50 @@ contract Underwriting is Ownable, ReentrancyGuard{
         }
         
         if(user.protocols.length == 0) {
-            user.protocols.push(_protocolId);
+            user.protocols.push(_pId);
         } else {
             bool contain = false;
             for(uint256 i=0; i<user.protocols.length; i++){
-                if(user.protocols[i] == _protocolId)
+                if(user.protocols[i] == _pId)
                     contain = true;
             } 
             if(!contain)
-                user.protocols.push(_protocolId);
+                user.protocols.push(_pId);
         }
 
-        user.faktInProtocols[_protocolId] = user.faktInProtocols[_protocolId].add(_amount);
+        user.faktInProtocols[_pId] = user.faktInProtocols[_pId].add(_amount);
         user.totalFakt = user.totalFakt.add(_amount);
-        user.debtInProtocols[_protocolId] = _amount.mul(pool.rewardPerFaktInProtocols[_protocolId]).div(1e12);
+        user.debtInProtocols[_pId] = _amount.mul(pool.rewardPerFaktInProtocols[_pId]).div(1e12);
 
-        pool.faktInProtocols[_protocolId] = pool.faktInProtocols[_protocolId].add(_amount);
+        pool.faktInProtocols[_pId] = pool.faktInProtocols[_pId].add(_amount);
 
         Fakt.transferFrom(msg.sender,address(this),_amount);
-        emit Deposit(msg.sender, _amount, _protocolId);
+        emit Deposit(msg.sender, _amount, _pId);
     }
 
-    function withdraw(uint256 _amount,uint256 _protocolId) 
+    function withdraw(uint256 _amount,uint256 _pId) 
         public nonReentrant
     {
         UserInfo storage user = usersInfo[msg.sender];
-        require( user.faktInProtocols[_protocolId] >= _amount,"insufficient balance");
+        require( user.faktInProtocols[_pId] >= _amount,"insufficient balance");
 
         uint256 pendingRewards = getUserRewards(msg.sender);
         if( pendingRewards > 0) {
             claim();
         }
 
-        user.faktInProtocols[_protocolId] = user.faktInProtocols[_protocolId].sub(_amount);
+        user.faktInProtocols[_pId] = user.faktInProtocols[_pId].sub(_amount);
         user.totalFakt = user.totalFakt.sub(_amount);
         
-        if(user.faktInProtocols[_protocolId] == 0) {
+        if(user.faktInProtocols[_pId] == 0) {
             for(uint256 i=0; i<user.protocols.length; i++){
-                if(user.protocols[i] == _protocolId) {
+                if(user.protocols[i] == _pId) {
                     delete user.protocols[i];
                 }
             }
         }
         Fakt.transfer(msg.sender,_amount);
-        emit Withdraw(msg.sender,_amount, _protocolId);
+        emit Withdraw(msg.sender,_amount, _pId);
     }
 
     // burn 1/2 for claiming
@@ -915,17 +915,17 @@ contract Underwriting is Ownable, ReentrancyGuard{
         emit Claim(msg.sender, pendingRewards );
     }
 
-    function updateRewardPerFakt(uint256 _protocolId, uint256 _amount) external onlyOperator {
+    function updateRewardPerFakt(uint256 _pId, uint256 _amount) external  {
 
         require(msg.sender == purchase,"have no permission");
         
         PoolInfo storage pool = poolInfo;
-        uint256 faktInPool = pool.faktInProtocols[_protocolId];
+        uint256 faktInPool = pool.faktInProtocols[_pId];
         if(faktInPool == 0) {
             pool.stuckBalance = pool.stuckBalance.add(_amount);
             return;
         } else {
-            pool.rewardPerFaktInProtocols[_protocolId] = pool.rewardPerFaktInProtocols[_protocolId].
+            pool.rewardPerFaktInProtocols[_pId] = pool.rewardPerFaktInProtocols[_pId].
                 add(_amount.mul(1e12).div(faktInPool));  
         }
     }
