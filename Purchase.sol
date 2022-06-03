@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma experimental ABIEncoderV2;
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -761,11 +760,6 @@ abstract contract ReentrancyGuard {
     }
 }
 
-interface IProduct {
-    function getStatus(uint256 _productId) external view returns (uint256);
-}
-
-
 
 interface IUnderwriting {
     function updateRewardPerFakt(uint256 _pid, uint256 amount) external ;
@@ -780,7 +774,6 @@ contract Purchase is Ownable, ReentrancyGuard {
     address public underWriting;
     address public surplus;
     address public treasury;
-    IProduct public product;
  
     uint256 public orderIndex = 0;
     uint256 public surplusRate = 40;
@@ -805,11 +798,10 @@ contract Purchase is Ownable, ReentrancyGuard {
     uint256 public totalPolicySold;
     address[]  public  divCurrencies;
 
-    constructor(address _underWriting,address _surplus,address _product,address _treasury)  {
+    constructor(address _underWriting,address _surplus,address _treasury)  {
         underWriting = _underWriting;
         surplus = _surplus;
         treasury = _treasury;
-        product = IProduct(_product);
     }
 
 
