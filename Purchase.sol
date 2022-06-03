@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
+pragma experimental ABIEncoderV2;
 pragma solidity ^0.8.4;
 
 /**
@@ -914,19 +915,29 @@ contract Purchase is Ownable, ReentrancyGuard {
 
     function getUserOrders(address _user) external view returns(Order[] memory) {
         require( _user != address(0), "invalid user");
-        uint256 numOrders = userOrders[msg.sender].length;
+        uint256 numOrders = userOrders[_user].length;
         Order[] memory _orders = new Order[](numOrders);
         for(uint256 i=0; i < numOrders; i++){
-            _orders[i] = insuranceOrders[userOrders[msg.sender][i]];
+            _orders[i] = insuranceOrders[userOrders[_user][i]];
         }
         return _orders;
     }
 
-    function getUserOrderIndex(address _user) external view returns(uint256[] memory) {
+    function getUserOrderIndexes(address _user) external view returns(uint256[] memory) {
         require( _user != address(0) ,"invalid user");
-
-        uint256[] memory indexes = userOrders[msg.sender];
+        uint256 orderLength = userOrders[_user].length;
+        require(orderLength > 0, "user have no orders");
+        uint256[] memory indexes = new uint256[](orderLength);
+        for(uint256 i=0; i<orderLength; i++) {
+            indexes[i] = userOrders[_user][i];
+        }
         return indexes;
+    }
+
+    function getUserOrderNum(address _user) external view returns(uint256) {
+        require( _user != address(0),"invalid address");
+        require(userOrders[_user].length>0,"thsi is bug");
+        return userOrders[_user].length;
     }
 
 
