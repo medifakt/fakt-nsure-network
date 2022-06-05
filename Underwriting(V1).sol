@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma experimental ABIEncoderV2;
-
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -81,6 +79,370 @@ interface IERC20 {
         uint256 amount
     ) external returns (bool);
 }
+
+/**
+ * @dev Library for managing
+ * https://en.wikipedia.org/wiki/Set_(abstract_data_type)[sets] of primitive
+ * types.
+ *
+ * Sets have the following properties:
+ *
+ * - Elements are added, removed, and checked for existence in constant time
+ * (O(1)).
+ * - Elements are enumerated in O(n). No guarantees are made on the ordering.
+ *
+ * ```
+ * contract Example {
+ *     // Add the library methods
+ *     using EnumerableSet for EnumerableSet.AddressSet;
+ *
+ *     // Declare a set state variable
+ *     EnumerableSet.AddressSet private mySet;
+ * }
+ * ```
+ *
+ * As of v3.3.0, sets of type `bytes32` (`Bytes32Set`), `address` (`AddressSet`)
+ * and `uint256` (`UintSet`) are supported.
+ *
+ * [WARNING]
+ * ====
+ *  Trying to delete such a structure from storage will likely result in data corruption, rendering the structure unusable.
+ *  See https://github.com/ethereum/solidity/pull/11843[ethereum/solidity#11843] for more info.
+ *
+ *  In order to clean an EnumerableSet, you can either remove all elements one by one or create a fresh instance using an array of EnumerableSet.
+ * ====
+ */
+library EnumerableSet {
+    // To implement this library for multiple types with as little code
+    // repetition as possible, we write it in terms of a generic Set type with
+    // bytes32 values.
+    // The Set implementation uses private functions, and user-facing
+    // implementations (such as AddressSet) are just wrappers around the
+    // underlying Set.
+    // This means that we can only create new EnumerableSets for types that fit
+    // in bytes32.
+
+    struct Set {
+        // Storage of set values
+        bytes32[] _values;
+        // Position of the value in the `values` array, plus 1 because index 0
+        // means a value is not in the set.
+        mapping(bytes32 => uint256) _indexes;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function _add(Set storage set, bytes32 value) private returns (bool) {
+        if (!_contains(set, value)) {
+            set._values.push(value);
+            // The value is stored at length-1, but we add 1 to all indexes
+            // and use 0 as a sentinel value
+            set._indexes[value] = set._values.length;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function _remove(Set storage set, bytes32 value) private returns (bool) {
+        // We read and store the value's index to prevent multiple reads from the same storage slot
+        uint256 valueIndex = set._indexes[value];
+
+        if (valueIndex != 0) {
+            // Equivalent to contains(set, value)
+            // To delete an element from the _values array in O(1), we swap the element to delete with the last one in
+            // the array, and then remove the last element (sometimes called as 'swap and pop').
+            // This modifies the order of the array, as noted in {at}.
+
+            uint256 toDeleteIndex = valueIndex - 1;
+            uint256 lastIndex = set._values.length - 1;
+
+            if (lastIndex != toDeleteIndex) {
+                bytes32 lastValue = set._values[lastIndex];
+
+                // Move the last value to the index where the value to delete is
+                set._values[toDeleteIndex] = lastValue;
+                // Update the index for the moved value
+                set._indexes[lastValue] = valueIndex; // Replace lastValue's index to valueIndex
+            }
+
+            // Delete the slot where the moved value was stored
+            set._values.pop();
+
+            // Delete the index for the deleted slot
+            delete set._indexes[value];
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function _contains(Set storage set, bytes32 value) private view returns (bool) {
+        return set._indexes[value] != 0;
+    }
+
+    /**
+     * @dev Returns the number of values on the set. O(1).
+     */
+    function _length(Set storage set) private view returns (uint256) {
+        return set._values.length;
+    }
+
+    /**
+     * @dev Returns the value stored at position `index` in the set. O(1).
+     *
+     * Note that there are no guarantees on the ordering of values inside the
+     * array, and it may change when more values are added or removed.
+     *
+     * Requirements:
+     *
+     * - `index` must be strictly less than {length}.
+     */
+    function _at(Set storage set, uint256 index) private view returns (bytes32) {
+        return set._values[index];
+    }
+
+    /**
+     * @dev Return the entire set in an array
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
+    function _values(Set storage set) private view returns (bytes32[] memory) {
+        return set._values;
+    }
+
+    // Bytes32Set
+
+    struct Bytes32Set {
+        Set _inner;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function add(Bytes32Set storage set, bytes32 value) internal returns (bool) {
+        return _add(set._inner, value);
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function remove(Bytes32Set storage set, bytes32 value) internal returns (bool) {
+        return _remove(set._inner, value);
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function contains(Bytes32Set storage set, bytes32 value) internal view returns (bool) {
+        return _contains(set._inner, value);
+    }
+
+    /**
+     * @dev Returns the number of values in the set. O(1).
+     */
+    function length(Bytes32Set storage set) internal view returns (uint256) {
+        return _length(set._inner);
+    }
+
+    /**
+     * @dev Returns the value stored at position `index` in the set. O(1).
+     *
+     * Note that there are no guarantees on the ordering of values inside the
+     * array, and it may change when more values are added or removed.
+     *
+     * Requirements:
+     *
+     * - `index` must be strictly less than {length}.
+     */
+    function at(Bytes32Set storage set, uint256 index) internal view returns (bytes32) {
+        return _at(set._inner, index);
+    }
+
+    /**
+     * @dev Return the entire set in an array
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
+    function values(Bytes32Set storage set) internal view returns (bytes32[] memory) {
+        return _values(set._inner);
+    }
+
+    // AddressSet
+
+    struct AddressSet {
+        Set _inner;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function add(AddressSet storage set, address value) internal returns (bool) {
+        return _add(set._inner, bytes32(uint256(uint160(value))));
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function remove(AddressSet storage set, address value) internal returns (bool) {
+        return _remove(set._inner, bytes32(uint256(uint160(value))));
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function contains(AddressSet storage set, address value) internal view returns (bool) {
+        return _contains(set._inner, bytes32(uint256(uint160(value))));
+    }
+
+    /**
+     * @dev Returns the number of values in the set. O(1).
+     */
+    function length(AddressSet storage set) internal view returns (uint256) {
+        return _length(set._inner);
+    }
+
+    /**
+     * @dev Returns the value stored at position `index` in the set. O(1).
+     *
+     * Note that there are no guarantees on the ordering of values inside the
+     * array, and it may change when more values are added or removed.
+     *
+     * Requirements:
+     *
+     * - `index` must be strictly less than {length}.
+     */
+    function at(AddressSet storage set, uint256 index) internal view returns (address) {
+        return address(uint160(uint256(_at(set._inner, index))));
+    }
+
+    /**
+     * @dev Return the entire set in an array
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
+    function values(AddressSet storage set) internal view returns (address[] memory) {
+        bytes32[] memory store = _values(set._inner);
+        address[] memory result;
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := store
+        }
+
+        return result;
+    }
+
+    // UintSet
+
+    struct UintSet {
+        Set _inner;
+    }
+
+    /**
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
+     */
+    function add(UintSet storage set, uint256 value) internal returns (bool) {
+        return _add(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
+     */
+    function remove(UintSet storage set, uint256 value) internal returns (bool) {
+        return _remove(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Returns true if the value is in the set. O(1).
+     */
+    function contains(UintSet storage set, uint256 value) internal view returns (bool) {
+        return _contains(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Returns the number of values on the set. O(1).
+     */
+    function length(UintSet storage set) internal view returns (uint256) {
+        return _length(set._inner);
+    }
+
+    /**
+     * @dev Returns the value stored at position `index` in the set. O(1).
+     *
+     * Note that there are no guarantees on the ordering of values inside the
+     * array, and it may change when more values are added or removed.
+     *
+     * Requirements:
+     *
+     * - `index` must be strictly less than {length}.
+     */
+    function at(UintSet storage set, uint256 index) internal view returns (uint256) {
+        return uint256(_at(set._inner, index));
+    }
+
+    /**
+     * @dev Return the entire set in an array
+     *
+     * WARNING: This operation will copy the entire storage to memory, which can be quite expensive. This is designed
+     * to mostly be used by view accessors that are queried without any gas fees. Developers should keep in mind that
+     * this function has an unbounded cost, and using it as part of a state-changing function may render the function
+     * uncallable if the set grows to a point where copying to memory consumes too much gas to fit in a block.
+     */
+    function values(UintSet storage set) internal view returns (uint256[] memory) {
+        bytes32[] memory store = _values(set._inner);
+        uint256[] memory result;
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := store
+        }
+
+        return result;
+    }
+}
+
 
 /**
  * @dev Wrappers over Solidity's arithmetic operations.
@@ -772,17 +1134,17 @@ contract Underwriting is Ownable, ReentrancyGuard{
     
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-    
+    using EnumerableSet for EnumerableSet.UintSet;
 
     uint256 public depositMax = 1000000e18;
-    uint256 public pendingDuration = 14 days;
+    bool public canWithdraw = true;
     address public operator;
     address public purchase;
     
     IFakt public Fakt;
   
     struct UserInfo {
-        uint256[] protocols;
+        EnumerableSet.UintSet protocols;
         mapping(uint256 => uint256) faktInProtocols;
         uint256 totalFakt;
         mapping(uint256 => uint256) debtInProtocols;
@@ -790,23 +1152,24 @@ contract Underwriting is Ownable, ReentrancyGuard{
 
     struct PoolInfo {
         uint256 stuckBalance;
+        EnumerableSet.UintSet protocols;
         mapping(uint256 => uint256) faktInProtocols;
         mapping(uint256 => uint256) rewardPerFaktInProtocols; // premium rate
     }
 
-    mapping(address => UserInfo) public usersInfo;
+    mapping(address => UserInfo) private usersInfo;
 
-    PoolInfo public poolInfo;
+    PoolInfo private poolInfo;
 
     modifier onlyOperator() {
         require(msg.sender == operator,"not operator");
         _;
     }
 
-    constructor( address _fakt) {
+    constructor( address _fakt, address _purchase) {
         Fakt = IFakt(_fakt);
+        purchase = _purchase;
         operator = msg.sender;
-
     }
 
 
@@ -834,33 +1197,31 @@ contract Underwriting is Ownable, ReentrancyGuard{
             claim();
         }
         
-        if(user.protocols.length == 0) {
-            user.protocols.push(_pId);
-        } else {
-            bool contain = false;
-            for(uint256 i=0; i<user.protocols.length; i++){
-                if(user.protocols[i] == _pId)
-                    contain = true;
-            } 
-            if(!contain)
-                user.protocols.push(_pId);
+        if(!user.protocols.contains(_pId)) {
+            user.protocols.add(_pId);
+        }
+        if(!pool.protocols.contains(_pId)) {
+            pool.protocols.add(_pId);
         }
 
         user.faktInProtocols[_pId] = user.faktInProtocols[_pId].add(_amount);
         user.totalFakt = user.totalFakt.add(_amount);
-        user.debtInProtocols[_pId] = _amount.mul(pool.rewardPerFaktInProtocols[_pId]).div(1e12);
+      //  user.debtInProtocols[_pId] = pool.rewardPerFaktInProtocols(_pId).mul(user.faktInProtocols[_pId]).div(1e12);
 
         pool.faktInProtocols[_pId] = pool.faktInProtocols[_pId].add(_amount);
 
         Fakt.transferFrom(msg.sender,address(this),_amount);
+
         emit Deposit(msg.sender, _amount, _pId);
     }
 
     function withdraw(uint256 _amount,uint256 _pId) 
         public nonReentrant
     {
+        require( canWithdraw,"withdraw not allowed for now");
         UserInfo storage user = usersInfo[msg.sender];
-        require( user.faktInProtocols[_pId] >= _amount,"insufficient balance");
+        PoolInfo storage pool = poolInfo;
+        require( user.faktInProtocols[_pId] >= _amount,"insufficient deposit balance");
 
         uint256 pendingRewards = getUserRewards(msg.sender);
         if( pendingRewards > 0) {
@@ -869,20 +1230,26 @@ contract Underwriting is Ownable, ReentrancyGuard{
 
         user.faktInProtocols[_pId] = user.faktInProtocols[_pId].sub(_amount);
         user.totalFakt = user.totalFakt.sub(_amount);
-        
+      //  user.debtInProtocols = pool.rewardPerFaktInProtocols(_pId).mul(user.faktInProtocols(_pId)).div(1e12);
+
+        pool.faktInProtocols[_pId] = pool.faktInProtocols[_pId].sub(_amount);
+
+
         if(user.faktInProtocols[_pId] == 0) {
-            for(uint256 i=0; i<user.protocols.length; i++){
-                if(user.protocols[i] == _pId) {
-                    delete user.protocols[i];
-                }
-            }
+            user.protocols.remove(_pId);
         }
+
+        if(pool.faktInProtocols[_pId] == 0){
+            pool.protocols.remove(_pId);
+        }
+
         Fakt.transfer(msg.sender,_amount);
+
         emit Withdraw(msg.sender,_amount, _pId);
     }
 
     // burn 1/2 for claiming
-    function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts,uint256 _protocol) 
+    function burnOuts(address[] calldata _burnUsers, uint256[] calldata _amounts,uint256 _pId) 
         external onlyOperator
     {
         require(_burnUsers.length == _amounts.length, "not equal");
@@ -890,11 +1257,21 @@ contract Underwriting is Ownable, ReentrancyGuard{
         for(uint256 i = 0; i<_burnUsers.length; i++) {
 
             UserInfo storage user = usersInfo[_burnUsers[i]];
-            require(user.faktInProtocols[_protocol] >= _amounts[i], "insufficient");
-            user.faktInProtocols[_protocol] = user.faktInProtocols[_protocol].sub(_amounts[i]);
+            PoolInfo storage pool = poolInfo;
+
+            require(user.faktInProtocols[_pId] >= _amounts[i], "insufficient");
+
+            user.faktInProtocols[_pId] = user.faktInProtocols[_pId].sub(_amounts[i]);
+            pool.faktInProtocols[_pId] = pool.faktInProtocols[_pId].sub(_amounts[i]);
+
             Fakt.burn(_amounts[i]);
-            emit Burn(_burnUsers[i],_amounts[i],_protocol);
+            emit Burn(_burnUsers[i],_amounts[i],_pId);
         }
+    }
+
+    function setWithdrawPermission( bool _flag) external onlyOwner {
+        require( canWithdraw != _flag,"already in that state");
+        canWithdraw = _flag;
     }
 
     function claim()  public nonReentrant       
@@ -905,9 +1282,9 @@ contract Underwriting is Ownable, ReentrancyGuard{
         UserInfo storage user = usersInfo[msg.sender];
         PoolInfo storage pool = poolInfo;
 
-        for(uint256 i = 0; i< user.protocols.length; i++) {
-            uint256 protocolId = user.protocols[i];
-            user.debtInProtocols[protocolId] = user.faktInProtocols[protocolId].mul(pool.rewardPerFaktInProtocols[protocolId]).div(1e12);
+        for(uint256 i = 0; i< user.protocols.length(); i++) {
+            uint256 pId = user.protocols.at(i);
+            user.debtInProtocols[pId] = user.faktInProtocols[pId].mul(pool.rewardPerFaktInProtocols[pId]).div(1e12);
         }
 
         payable(msg.sender).transfer(pendingRewards);
@@ -931,29 +1308,70 @@ contract Underwriting is Ownable, ReentrancyGuard{
     }
 
     function getUserRewards(address _user) public view returns(uint256) {
-        require( _user != address(0),"Null address");
+
+        require( _user != address(0),"invalid address");
 
         UserInfo storage user = usersInfo[_user];
         PoolInfo storage pool = poolInfo;
         uint256 rewards;
 
-        if(user.protocols.length == 0) {
+        if(user.protocols.length() == 0) {
             return 0;
         } else {
             
-            for(uint256 i=0; i<user.protocols.length; i++){
-                uint256 rewardInProtocol = user.faktInProtocols[user.protocols[i]]
-                    .mul(pool.rewardPerFaktInProtocols[user.protocols[i]]).div(1e12).sub(user.debtInProtocols[user.protocols[i]]);
+            for(uint256 i=0; i<user.protocols.length(); i++){
+                uint256 rewardInProtocol = user.faktInProtocols[user.protocols.at(i)]
+                    .mul(pool.rewardPerFaktInProtocols[user.protocols.at(i)]).div(1e12).sub(user.debtInProtocols[user.protocols.at(i)]);
                 rewards = rewards.add(rewardInProtocol);
             }
         }
         return rewards;
     }
 
+
+    function getUserInfo(address _user) external view returns(uint256[] memory, uint256[] memory, uint256){
+
+        require( _user != address(0),"invalid address");
+
+        UserInfo storage user = usersInfo[_user];
+
+        uint256 numProtocols= user.protocols.length();
+
+        uint256[] memory pIds = new uint256[](numProtocols);
+        uint256[] memory faktInProtocols = new uint256[](numProtocols);
+
+        for(uint256 i=0; i<numProtocols; i++) {
+            pIds[i] = user.protocols.at(i);
+            faktInProtocols[i] = user.faktInProtocols[user.protocols.at(i)];
+        }
+        return (pIds, faktInProtocols, user.totalFakt);
+    }
+
+    function getPoolInfo() external view returns(uint256,uint256[] memory, uint256[] memory, uint256[] memory){
+        
+        PoolInfo storage pool = poolInfo;
+
+        uint256 stuckBalance = pool.stuckBalance;
+        
+        uint256 numProtocols = pool.protocols.length();
+        uint256[] memory pIds = new uint256[](numProtocols);
+        uint256[] memory faktInProtocols = new uint256[](numProtocols);
+        uint256[] memory rewardPerFaktInProtocols = new uint256[](numProtocols);
+
+        for(uint256 i=0; i<numProtocols; i++) {
+            pIds[i] = pool.protocols.at(i);
+            faktInProtocols[i] = pool.faktInProtocols[pool.protocols.at(i)];
+            rewardPerFaktInProtocols[i] = pool.rewardPerFaktInProtocols[pool.protocols.at(i)]; 
+        }        
+
+        return (stuckBalance, pIds, faktInProtocols, rewardPerFaktInProtocols);
+    }
+
     function payout(address _to, uint256 _amount) external onlyOwner {
         require( _to != address(0),"null address not allowed");
         require( _amount<= address(this).balance,"exceed amount");
-
+        
+        poolInfo.stuckBalance = poolInfo.stuckBalance.sub(_amount);        
         payable(_to).transfer(_amount);
         emit Payout(_to, _amount);
     }
